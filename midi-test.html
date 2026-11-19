@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LK-530 接続テスト</title>
+<style>
+  :root{
+    --bg:#f6f3ee; --card:#fffdf9; --ink:#2a2622; --sub:#6f675e; --line:#e3ddd3;
+    --accent:#d9572b; --ok:#2e8b57; --ng:#c0392b; --hit:#ff7a45; --glow:#ffd166;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:"Hiragino Sans","Noto Sans JP",system-ui,sans-serif;line-height:1.6}
+  main{max-width:960px;margin:0 auto;padding:20px 16px 48px}
+  h1{font-size:1.4rem;margin:0 0 4px}
+  .lead{color:var(--sub);margin:0 0 18px;font-size:.95rem}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px 18px;margin-bottom:16px}
+  .card h2{font-size:1.05rem;margin:0 0 10px;display:flex;align-items:center;gap:8px}
+  .step{display:inline-grid;place-items:center;width:26px;height:26px;border-radius:50%;
+    background:var(--ink);color:#fff;font-size:.85rem}
+  .badge{margin-left:auto;font-size:.8rem;padding:2px 10px;border-radius:99px;background:#eee;color:var(--sub)}
+  .badge.ok{background:#e3f3ea;color:var(--ok)} .badge.ng{background:#fbe6e3;color:var(--ng)}
+  button{font:inherit;font-size:1rem;border:0;border-radius:10px;padding:12px 18px;cursor:pointer;
+    background:var(--accent);color:#fff;min-height:48px}
+  button.sec{background:#fff;color:var(--ink);border:1px solid var(--line)}
+  button:disabled{opacity:.4;cursor:default}
+  .row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+  select{font:inherit;padding:10px;border-radius:8px;border:1px solid var(--line);background:#fff;min-height:44px}
+  .msg{margin-top:10px;font-size:.95rem}
+  .msg.ng{color:var(--ng)} .msg.ok{color:var(--ok)}
+  .big{font-size:2.2rem;font-weight:700;letter-spacing:.02em;min-height:3.2rem}
+  .note{font-size:.85rem;color:var(--sub)}
+  ul.dev{margin:6px 0 0;padding-left:20px;font-size:.9rem}
+  /* keyboard */
+  .kbwrap{overflow-x:auto;padding-bottom:6px}
+  .kb{position:relative;height:150px;min-width:900px;user-select:none;touch-action:manipulation}
+  .w,.b{position:absolute;top:0;border:1px solid #bbb;border-radius:0 0 6px 6px}
+  .w{height:150px;background:#fff;z-index:1}
+  .b{height:92px;background:#222;z-index:2;border-color:#111}
+  .w.on{background:var(--hit)} .b.on{background:var(--hit)}
+  .w.lit{box-shadow:inset 0 -24px 0 var(--glow)} .b.lit{box-shadow:inset 0 -18px 0 var(--glow)}
+  .lbl{position:absolute;bottom:4px;width:100%;text-align:center;font-size:10px;color:#999;pointer-events:none}
+  details{margin-top:8px} summary{cursor:pointer;color:var(--sub);font-size:.9rem}
+  ol{padding-left:20px;margin:6px 0}
+  .log{font-family:ui-monospace,monospace;font-size:.8rem;background:#f1ede6;border-radius:8px;padding:8px;
+    max-height:140px;overflow:auto;white-space:pre-wrap;margin-top:8px}
+</style>
+</head>
+<body>
+<main>
+  <h1>🎹 LK-530 接続テスト</h1>
+  <p class="lead">キーボードとタブレット（またはパソコン）がつながるかを確かめるページです。</p>
+
+  <div class="card">
+    <h2><span class="step">0</span>準備</h2>
+    <ol>
+      <li>LK-530 の背面 <b>Micro-B 端子</b> とタブレットを USB-C⇔Micro-B ケーブルでつなぐ</li>
+      <li>LK-530 の電源を入れる</li>
+      <li>このページを <b>Chrome</b>（Windows なら Chrome か Edge）で開く</li>
+    </ol>
+  </div>
+
+  <div class="card">
+    <h2><span class="step">1</span>つなぐ<span id="b1" class="badge">未接続</span></h2>
+    <div class="row">
+      <button id="connect">キーボードに接続する</button>
+    </div>
+    <div id="m1" class="msg"></div>
+    <ul id="devs" class="dev"></ul>
+  </div>
+
+  <div class="card">
+    <h2><span class="step">2</span>弾いてみる（キーボード → 画面）<span id="b2" class="badge">まだ</span></h2>
+    <p class="note">LK-530 の鍵盤を押すと、下の鍵盤がオレンジ色になります。</p>
+    <div class="big" id="noteName">—</div>
+    <div class="kbwrap"><div class="kb" id="kb"></div></div>
+    <p class="note">画面の鍵盤をタップすると、その音を LK-530 に送ります（手順3の確認にも使えます）。</p>
+  </div>
+
+  <div class="card">
+    <h2><span class="step">3</span>光らせてみる（画面 → キーボード）<span id="b3" class="badge">まだ</span></h2>
+    <div class="row" style="margin-bottom:10px">
+      <label for="out">送り先</label><select id="out"><option>（接続後に選べます）</option></select>
+      <label for="ch">チャンネル</label><select id="ch"></select>
+    </div>
+    <div class="row">
+      <button id="lightC" class="sec" disabled>ド（C4）を光らせる</button>
+      <button id="scale" class="sec" disabled>ドレミファソ を順に</button>
+      <button id="lookOk" class="sec" disabled>✅ 光った</button>
+      <button id="lookNg" class="sec" disabled>✖ 光らない</button>
+    </div>
+    <div id="m3" class="msg"></div>
+    <details>
+      <summary>光らないときは</summary>
+      <ol>
+        <li>LK-530 の設定で <b>MIDI IN Navigate</b> をオンにする（取扱説明書の「設定項目一覧」を参照）</li>
+        <li>チャンネルを変えて試す。カシオでは右手パート＝4、左手パート＝3 が使われることが多いです</li>
+        <li>音は鳴るのに光らない場合は、ナビゲート設定がオフになっている可能性が高いです</li>
+      </ol>
+    </details>
+  </div>
+
+  <div class="card">
+    <h2>結果</h2>
+    <div id="summary" class="note">手順1〜3を試すと、ここに結果がまとまります。</div>
+    <details><summary>通信の記録</summary><div class="log" id="log"></div></details>
+  </div>
+</main>
+
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const NAMES = ['ド','ド#','レ','レ#','ミ','ファ','ファ#','ソ','ソ#','ラ','ラ#','シ'];
+  const EN = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
+  const LOW = 36, HIGH = 96; // LK-530: 61鍵 C2〜C7
+  const state = {access:null, out:null, r1:false, r2:false, r3:null};
+  const keyEls = {};
+
+  const log = t => { const l=$('log'); l.textContent = (new Date().toLocaleTimeString()+'  '+t+'\n'+l.textContent).slice(0,4000); };
+  const nm = n => NAMES[n%12]+'（'+EN[n%12]+(Math.floor(n/12)-1)+'）';
+  const badge = (id, cls, txt) => { const b=$(id); b.className='badge '+cls; b.textContent=txt; };
+
+  // channel select
+  for(let c=1;c<=16;c++){ const o=document.createElement('option'); o.value=c; o.textContent=c; if(c===4) o.selected=true; $('ch').appendChild(o); }
+
+  // build keyboard
+  (function build(){
+    const kb=$('kb'); const isB = n => [1,3,6,8,10].includes(n%12);
+    let whites=0; for(let n=LOW;n<=HIGH;n++) if(!isB(n)) whites++;
+    const W = 100/whites; let wi=0;
+    for(let n=LOW;n<=HIGH;n++){
+      const el=document.createElement('div');
+      if(isB(n)){ el.className='b'; el.style.left=(wi*W - W*0.32)+'%'; el.style.width=(W*0.64)+'%'; }
+      else { el.className='w'; el.style.left=(wi*W)+'%'; el.style.width=W+'%';
+        if(n%12===0){ const l=document.createElement('span'); l.className='lbl'; l.textContent='C'+(n/12-1); el.appendChild(l); }
+        wi++; }
+      el.addEventListener('pointerdown', e => { e.preventDefault(); tapKey(n); });
+      kb.appendChild(el); keyEls[n]=el;
+    }
+  })();
+
+  function setOn(n,on){ const el=keyEls[n]; if(el) el.classList.toggle('on',on); }
+  function setLit(n,on){ const el=keyEls[n]; if(el) el.classList.toggle('lit',on); }
+
+  function onMsg(e){
+    const [st,d1,d2]=e.data; const cmd=st&0xf0, ch=(st&0x0f)+1;
+    if(cmd===0xF0||st>=0xF8) return;
+    if(cmd===0x90 && d2>0){
+      setOn(d1,true); $('noteName').textContent=nm(d1);
+      log(`受信 ノートON ${nm(d1)} 強さ${d2} ch${ch}`);
+      if(!state.r2){ state.r2=true; badge('b2','ok','OK'); summarize(); }
+    } else if(cmd===0x80 || (cmd===0x90 && d2===0)){ setOn(d1,false); }
+  }
+
+  function listDevices(){
+    const ul=$('devs'); ul.innerHTML='';
+    const ins=[...state.access.inputs.values()], outs=[...state.access.outputs.values()];
+    ins.forEach(i => { i.onmidimessage=onMsg; const li=document.createElement('li'); li.textContent='入力：'+i.name; ul.appendChild(li); });
+    outs.forEach(o => { const li=document.createElement('li'); li.textContent='出力：'+o.name; ul.appendChild(li); });
+    const sel=$('out'); sel.innerHTML='';
+    outs.forEach(o => { const op=document.createElement('option'); op.value=o.id; op.textContent=o.name; sel.appendChild(op); });
+    state.out = outs.find(o=>/casio|lk/i.test(o.name)) || outs[0] || null;
+    if(state.out) sel.value=state.out.id;
+    const has = ins.length||outs.length;
+    ['lightC','scale','lookOk','lookNg'].forEach(id => $(id).disabled = !state.out);
+    if(has){ state.r1=true; badge('b1','ok','接続OK'); $('m1').className='msg ok'; $('m1').textContent='つながりました。鍵盤を押してみてください。'; }
+    else { badge('b1','ng','機器なし'); $('m1').className='msg ng';
+      $('m1').textContent='ブラウザは対応していますが、キーボードが見つかりません。ケーブルと電源を確認し、つなぎ直すと自動で再検出します。'; }
+    summarize();
+  }
+
+  $('connect').addEventListener('click', async () => {
+    if(!navigator.requestMIDIAccess){
+      badge('b1','ng','非対応'); $('m1').className='msg ng';
+      $('m1').textContent='このブラウザはキーボード接続（Web MIDI）に対応していません。Android・Windows の Chrome で開いてください（iPhone/iPad の Safari は非対応です）。';
+      log('requestMIDIAccess なし'); return;
+    }
+    try{
+      state.access = await navigator.requestMIDIAccess({sysex:false});
+      state.access.onstatechange = e => { log('機器の変化：'+e.port.name+' '+e.port.state); listDevices(); };
+      log('Web MIDI 許可OK'); listDevices();
+    }catch(err){
+      badge('b1','ng','許可されず'); $('m1').className='msg ng';
+      $('m1').textContent='接続が許可されませんでした（'+err.name+'）。表示された許可を「許可」にするか、このページが埋め込み表示で制限されている可能性があります。その場合は、送られたHTMLファイルをChromeで直接開いて試してください。';
+      log('エラー '+err.name+': '+err.message);
+    }
+  });
+
+  $('out').addEventListener('change', e => { state.out = state.access && state.access.outputs.get(e.target.value); });
+
+  function send(n, ms=600){
+    if(!state.out) return;
+    const ch=(+$('ch').value)-1;
+    state.out.send([0x90|ch, n, 90]); setLit(n,true);
+    log(`送信 ノートON ${nm(n)} ch${ch+1}`);
+    setTimeout(()=>{ state.out.send([0x80|ch, n, 0]); setLit(n,false); }, ms);
+  }
+  function tapKey(n){ if(state.out) send(n,400); else { $('noteName').textContent=nm(n); } }
+
+  $('lightC').addEventListener('click', () => { send(60,1200); $('m3').className='msg'; $('m3').textContent='LK-530 の真ん中のドが光ったか見てください。'; });
+  $('scale').addEventListener('click', () => { [60,62,64,65,67].forEach((n,i)=>setTimeout(()=>send(n,450), i*550)); $('m3').className='msg'; $('m3').textContent='ドレミファソが順に光ったか見てください。'; });
+  $('lookOk').addEventListener('click', () => { state.r3=true; badge('b3','ok','OK'); $('m3').className='msg ok'; $('m3').textContent='光りました！ アプリからキーボードの鍵盤を光らせて練習できます。'; summarize(); });
+  $('lookNg').addEventListener('click', () => { state.r3=false; badge('b3','ng','光らない'); $('m3').className='msg ng'; $('m3').textContent='下の「光らないときは」を試してください。チャンネルを変えて再度ボタンを押せます。'; summarize(); });
+
+  function summarize(){
+    const s=[];
+    s.push((state.r1?'✅':'⬜')+' 接続');
+    s.push((state.r2?'✅':'⬜')+' キーボード → 画面（弾いた音を判定できる）');
+    s.push((state.r3===true?'✅':state.r3===false?'✖':'⬜')+' 画面 → キーボード（鍵盤を光らせられる）'+(state.r3?'：チャンネル '+$('ch').value:''));
+    $('summary').innerHTML = s.join('<br>') + (state.r1&&state.r2&&state.r3 ? '<br><b>すべてOK。本番の練習アプリを作れます。</b>' : '');
+  }
+})();
+</script>
+</body>
+</html>
