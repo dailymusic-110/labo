@@ -1,0 +1,1382 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ピアノれんしゅう帳</title>
+<style>
+:root{
+  --bg:#f5f1ea; --card:#fffdf9; --ink:#2b2621; --sub:#776d62; --line:#e2dbcf;
+  --accent:#d4572a; --accent2:#2f6f8f; --ok:#2e8b57; --ng:#c0392b; --warn:#c98a12;
+  --R:#e8743b; --L:#3d84b8; --hit:#3aa76d; --miss:#c9645a; --glow:#ffd166;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{background:var(--bg);color:var(--ink);font-family:"Hiragino Sans","Noto Sans JP",system-ui,sans-serif;line-height:1.55;-webkit-tap-highlight-color:transparent}
+header{position:sticky;top:0;z-index:20;background:var(--ink);color:#fff;display:flex;align-items:center;gap:8px;padding:8px 12px;flex-wrap:wrap}
+header h1{font-size:1.05rem;margin:0 8px 0 0;white-space:nowrap}
+nav{display:flex;gap:4px;flex-wrap:wrap;flex:1}
+nav button{background:transparent;color:#d9d2c7;border:0;padding:8px 12px;border-radius:8px;font:inherit;font-size:.95rem;cursor:pointer;min-height:40px}
+nav button.on{background:#fff;color:var(--ink);font-weight:700}
+#conn{border:0;border-radius:99px;padding:8px 14px;font:inherit;font-size:.85rem;cursor:pointer;background:#5a524a;color:#fff;min-height:40px}
+#conn.ok{background:var(--ok)}
+main{max-width:1180px;margin:0 auto;padding:14px 12px 60px}
+section.tab{display:none} section.tab.on{display:block}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 16px;margin-bottom:14px}
+.card h2{font-size:1.05rem;margin:0 0 10px}
+.card h3{font-size:.95rem;margin:12px 0 6px;color:var(--sub)}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.grow{flex:1}
+button.b{font:inherit;font-size:.95rem;border:1px solid var(--line);border-radius:10px;padding:8px 14px;cursor:pointer;background:#fff;color:var(--ink);min-height:44px}
+button.b.pri{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:700}
+button.b.blue{background:var(--accent2);border-color:var(--accent2);color:#fff}
+button.b.sm{min-height:34px;padding:4px 10px;font-size:.85rem}
+button.b.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+button.b:disabled{opacity:.35;cursor:default}
+select,input[type=text],input[type=number],textarea{font:inherit;font-size:.95rem;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--ink);min-height:40px}
+textarea{width:100%;min-height:110px;font-family:ui-monospace,monospace}
+label.tg{display:inline-flex;align-items:center;gap:6px;font-size:.9rem;padding:6px 10px;border:1px solid var(--line);border-radius:99px;background:#fff;cursor:pointer;min-height:40px}
+label.tg input{width:18px;height:18px}
+.muted{color:var(--sub);font-size:.88rem}
+.pill{display:inline-block;font-size:.75rem;padding:1px 8px;border-radius:99px;background:#eee8de;color:var(--sub);margin:2px 3px 2px 0}
+.pill.ok{background:#e1f2e8;color:var(--ok)} .pill.ng{background:#f8e3e0;color:var(--ng)} .pill.warn{background:#fbefd6;color:var(--warn)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px}
+.song{border:1px solid var(--line);border-radius:12px;padding:10px 12px;background:#fff}
+.song .t{font-weight:700}
+.song.target{border-color:var(--accent);box-shadow:0 0 0 2px #f5d3c4 inset}
+.stage{margin-bottom:6px}
+.stage h3{color:var(--ink)}
+/* practice */
+#pv{position:relative;background:#1f1c19;border-radius:14px;overflow:hidden;touch-action:none;user-select:none}
+#cv{display:block;width:100%;height:56vh;min-height:300px}
+#hud{position:absolute;left:10px;top:8px;right:10px;display:flex;gap:12px;color:#fff;font-size:.9rem;pointer-events:none;flex-wrap:wrap;align-items:baseline}
+#hud .chord{font-size:2rem;font-weight:800;color:var(--glow);margin-right:6px}
+#flash{position:absolute;left:50%;top:40%;transform:translate(-50%,-50%);color:#fff;font-size:1.6rem;font-weight:800;background:rgba(0,0,0,.55);padding:10px 22px;border-radius:12px;display:none;text-align:center}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:#fff}
+.seg button{border:0;background:transparent;font:inherit;font-size:.88rem;padding:8px 10px;cursor:pointer;min-height:42px;border-right:1px solid var(--line)}
+.seg button:last-child{border-right:0}
+.seg button.on{background:var(--ink);color:#fff}
+.seg button:disabled{opacity:.3}
+input[type=range]{width:160px}
+/* dom keyboard */
+.dkb{position:relative;height:110px;user-select:none;touch-action:manipulation;margin-top:8px}
+.dkb .w,.dkb .k{position:absolute;top:0;border:1px solid #bbb;border-radius:0 0 6px 6px}
+.dkb .w{height:110px;background:#fff;z-index:1}
+.dkb .k{height:66px;background:#222;z-index:2;border-color:#111}
+.dkb .mark{background:var(--glow)!important}
+.dkb .held{background:var(--R)!important}
+.dkb .lb{position:absolute;bottom:3px;width:100%;text-align:center;font-size:10px;color:#999;pointer-events:none}
+/* editor */
+.barlist{border:1px solid var(--line);border-radius:10px;background:#fff;max-height:340px;overflow:auto}
+.on-row{display:flex;gap:6px;align-items:center;padding:6px 10px;border-bottom:1px solid #f0ebe3;flex-wrap:wrap;font-size:.9rem}
+.on-row:last-child{border-bottom:0}
+.on-row .beat{width:64px;color:var(--sub);font-size:.8rem}
+.nchip{display:inline-flex;align-items:center;gap:4px;padding:2px 4px 2px 8px;border-radius:8px;font-size:.85rem;color:#fff}
+.nchip.R{background:var(--R)} .nchip.L{background:var(--L)}
+.nchip.sel{outline:3px solid var(--glow)}
+.nchip button{border:0;background:rgba(255,255,255,.25);color:#fff;border-radius:6px;cursor:pointer;font-size:.8rem;padding:2px 6px}
+.chordbox{display:inline-block;min-width:70px;text-align:center;border:1px solid var(--line);border-radius:10px;padding:8px;margin:4px;background:#fff;cursor:pointer}
+.chordbox.ok{background:#e1f2e8;border-color:#a9d8bd}
+.chordbox.next{border-color:var(--accent);box-shadow:0 0 0 2px #f5d3c4 inset}
+.chordbox .n{font-size:1.2rem;font-weight:800}
+.menu-item{display:flex;gap:12px;align-items:center;border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-bottom:8px;background:#fff}
+.menu-item .num{width:30px;height:30px;border-radius:50%;background:var(--ink);color:#fff;display:grid;place-items:center;font-weight:700;flex:none}
+.menu-item.done{opacity:.55}
+.big{font-size:1.8rem;font-weight:800}
+.bars14{display:flex;gap:4px;align-items:flex-end;height:80px;margin-top:8px}
+.bars14 div{flex:1;background:var(--accent2);border-radius:4px 4px 0 0;min-height:2px;position:relative}
+.bars14 span{position:absolute;bottom:-18px;left:0;right:0;text-align:center;font-size:10px;color:var(--sub)}
+table{border-collapse:collapse;width:100%;font-size:.88rem}
+td,th{border-bottom:1px solid #eee5d8;padding:6px;text-align:left}
+#toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 18px;border-radius:12px;font-size:.95rem;display:none;z-index:50;max-width:90vw}
+#modal{position:fixed;inset:0;background:rgba(0,0,0,.4);display:none;align-items:center;justify-content:center;z-index:60}
+#modal .box{background:#fff;border-radius:14px;padding:18px;max-width:420px;width:90vw}
+</style>
+</head>
+<body>
+<header>
+  <h1>🎹 ピアノれんしゅう帳</h1>
+  <nav id="nav">
+    <button data-t="today" class="on">今日</button>
+    <button data-t="songs">曲</button>
+    <button data-t="practice">練習</button>
+    <button data-t="edit">入力・修正</button>
+    <button data-t="chords">和音マップ</button>
+    <button data-t="log">記録</button>
+    <button data-t="settings">設定</button>
+  </nav>
+  <button id="conn">⚪ キーボード未接続</button>
+</header>
+<main>
+
+<!-- 今日 -->
+<section class="tab on" id="t-today">
+  <div class="card">
+    <div class="row">
+      <div><div class="muted">続けている日数</div><div class="big" id="streak">0日</div></div>
+      <div style="margin-left:24px"><div class="muted">今週の練習</div><div class="big" id="week">0分</div></div>
+    </div>
+  </div>
+  <div class="card">
+    <h2>今日のメニュー（5〜10分）</h2>
+    <div id="menu"></div>
+  </div>
+</section>
+
+<!-- 曲 -->
+<section class="tab" id="t-songs">
+  <div class="card">
+    <div class="row">
+      <button class="b pri" id="impNew">📄 楽譜ファイルを読み込む</button>
+      <button class="b" id="newSong">＋ 空の曲を作る</button>
+      <span class="muted grow">MusicXML（.musicxml / .xml / .mxl）と MIDI（.mid）に対応。PlayScore 2 では MusicXML で書き出してください。</span>
+    </div>
+  </div>
+  <div id="songList"></div>
+</section>
+
+<!-- 練習 -->
+<section class="tab" id="t-practice">
+  <div class="card">
+    <div class="row" style="margin-bottom:8px">
+      <select id="pSong" class="grow" style="max-width:340px"></select>
+      <div class="seg" id="pLevel"></div>
+    </div>
+    <div class="row" style="margin-bottom:8px">
+      <div class="seg" id="pMode"><button data-m="wait" class="on">待ちモード</button><button data-m="tempo">テンポモード</button></div>
+      <span class="muted">速さ</span><input type="range" id="pSpeed" min="30" max="120" step="5" value="60"><b id="pSpeedV">60%</b>
+      <span class="muted">小節</span><select id="pFrom"></select><span>〜</span><select id="pTo"></select>
+      <button class="b sm" id="pAll">全体</button>
+    </div>
+    <div class="row">
+      <label class="tg"><input type="checkbox" id="oLight" checked>鍵盤を光らせる</label>
+      <label class="tg"><input type="checkbox" id="oAcc" checked>伴奏</label>
+      <label class="tg"><input type="checkbox" id="oMet">メトロノーム</label>
+      <label class="tg"><input type="checkbox" id="oAuto" checked>上手に弾けたら速く</label>
+      <label class="tg"><input type="checkbox" id="oRec">録音する</label>
+      <span class="grow"></span>
+      <button class="b pri" id="pStart" style="min-width:140px">▶ はじめる</button>
+    </div>
+  </div>
+  <div id="pv">
+    <canvas id="cv"></canvas>
+    <div id="hud"><span class="chord" id="hChord"></span><span id="hBar"></span><span id="hInfo"></span></div>
+    <div id="flash"></div>
+  </div>
+  <p class="muted" id="pHelp">画面下の鍵盤はタップでも弾けます。待ちモードは正しい鍵盤を押すまで止まって待ちます。</p>
+</section>
+
+<!-- 入力・修正 -->
+<section class="tab" id="t-edit">
+  <div class="card">
+    <div class="row">
+      <select id="eSong" class="grow" style="max-width:340px"></select>
+      <button class="b sm" id="eImp">この曲に楽譜ファイルを読み込む</button>
+    </div>
+    <h3>曲の情報</h3>
+    <div class="row">
+      <input type="text" id="eTitle" placeholder="曲名" class="grow">
+      <input type="text" id="eArtist" placeholder="アーティスト" style="max-width:200px">
+      <select id="eStage"><option value="1">段階1 メロディ</option><option value="2">段階2 3つの和音</option><option value="3">段階3 短調の和音</option><option value="4">段階4 分散和音</option><option value="5">段階5 ピアノが主役</option></select>
+      <label class="tg"><input type="checkbox" id="eTarget">目標曲</label>
+    </div>
+    <div class="row" style="margin-top:8px">
+      <span class="muted">テンポ</span><input type="number" id="eBpm" min="30" max="260" style="width:90px">
+      <span class="muted">拍子</span><input type="number" id="eNum" min="1" max="12" style="width:70px">/<select id="eDen"><option>4</option><option>8</option><option>2</option></select>
+      <button class="b sm" id="eSave">情報を保存</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>小節の確認と修正</h2>
+    <div id="eIssues" class="muted"></div>
+    <div class="row" style="margin:8px 0">
+      <button class="b sm" id="ePrev">◀</button>
+      <b id="eBarLbl">1小節目</b>
+      <button class="b sm" id="eNext">▶</button>
+      <button class="b sm blue" id="ePlay">🔊 この小節を再生</button>
+      <button class="b sm" id="eOk">✅ この小節はOK</button>
+    </div>
+    <div class="barlist" id="eBar"></div>
+    <p class="muted">音の「直す」を押してから LK-530 の正しい鍵盤を押すと、その音だけ置き換わります。</p>
+  </div>
+
+  <div class="card">
+    <h2>鍵盤で入力</h2>
+    <div class="row">
+      <div class="seg" id="sHand"><button data-h="R" class="on">右手</button><button data-h="L">左手</button></div>
+      <div class="seg" id="sDur"><button data-d="4">全</button><button data-d="2">2分</button><button data-d="1" class="on">4分</button><button data-d="0.5">8分</button><button data-d="0.25">16分</button></div>
+      <label class="tg"><input type="checkbox" id="sDot">付点</label>
+      <label class="tg"><input type="checkbox" id="sTri">3連</label>
+    </div>
+    <div class="row" style="margin-top:8px">
+      <label class="tg"><input type="checkbox" id="sArm">入力オン</label>
+      <span id="sCur" class="muted grow"></span>
+      <button class="b sm" id="sRest">休符</button>
+      <button class="b sm" id="sUndo">1つ戻す</button>
+      <button class="b sm" id="sBarStart">この小節の頭へ</button>
+      <button class="b sm" id="sClear">この小節の選んだ手を消す</button>
+    </div>
+    <div class="dkb" id="eKb"></div>
+    <p class="muted">入力オンにして鍵盤を押し、全部離したところで1つの音（和音）として入ります。リズムに合わせる必要はありません。</p>
+  </div>
+
+  <div class="card">
+    <h2>コード入力</h2>
+    <p class="muted">小節を「|」で区切り、1小節に複数あるときは空白で区切ります。例：<code>G | Em | C D | G</code>　（休みの小節は <code>-</code>）</p>
+    <textarea id="cText"></textarea>
+    <div class="row" style="margin-top:8px"><button class="b pri" id="cApply">コードを反映</button><span id="cMsg" class="muted"></span></div>
+  </div>
+</section>
+
+<!-- 和音マップ -->
+<section class="tab" id="t-chords">
+  <div class="card">
+    <h2>覚えた和音</h2>
+    <p class="muted">和音をタップすると押さえ方を表示します。ドリルを90%以上で弾けると「覚えた」になります。</p>
+    <div id="chordGrid"></div>
+    <div id="chordDetail" style="margin-top:10px"></div>
+  </div>
+  <div class="card">
+    <h2>解放マップ</h2>
+    <div id="unlock"></div>
+  </div>
+</section>
+
+<!-- 記録 -->
+<section class="tab" id="t-log">
+  <div class="card">
+    <h2>最近14日の練習時間</h2>
+    <div class="bars14" id="bars14"></div>
+    <div style="height:18px"></div>
+  </div>
+  <div class="card">
+    <h2>曲ごとの進み具合</h2>
+    <div id="progTable"></div>
+  </div>
+  <div class="card">
+    <h2>録音</h2>
+    <div class="row" style="margin-bottom:8px">
+      <button class="b" id="freeRec">⏺ 自由に録音</button>
+      <span class="muted">練習画面の「録音する」でも残せます。2つ選ぶと続けて聴き比べられます。</span>
+    </div>
+    <div id="recList"></div>
+    <div class="row" style="margin-top:8px"><button class="b blue" id="cmpPlay" disabled>選んだ2つを聴き比べる</button><button class="b" id="recStop">■ 再生を止める</button></div>
+  </div>
+</section>
+
+<!-- 設定 -->
+<section class="tab" id="t-settings">
+  <div class="card">
+    <h2>キーボードとの接続</h2>
+    <div class="row"><span class="muted">入力</span><select id="sIn"></select><span class="muted">出力</span><select id="sOut"></select><button class="b sm" id="sReconn">再接続</button></div>
+    <div class="row" style="margin-top:8px">
+      <span class="muted">光らせるチャンネル 右手</span><select id="sChR"></select>
+      <span class="muted">左手</span><select id="sChL"></select>
+      <span class="muted">ガイド音の強さ</span><input type="number" id="sVel" min="1" max="127" style="width:80px">
+      <button class="b sm" id="sLightTest">光テスト</button>
+    </div>
+    <p class="muted">ガイド音の強さを小さくすると、光らせたときの音が目立たなくなります（光り方は機種の設定によります）。</p>
+  </div>
+  <div class="card">
+    <h2>音と表示</h2>
+    <div class="row">
+      <span class="muted">伴奏の出力</span><select id="sAccOut"><option value="tab">タブレットのスピーカー</option><option value="kb">キーボード（ch1）</option></select>
+      <span class="muted">音量</span><input type="range" id="sVol" min="0" max="100">
+      <span class="muted">音名</span><select id="sNames"><option value="ja">ドレミ</option><option value="en">CDE</option><option value="none">なし</option></select>
+    </div>
+    <div class="row" style="margin-top:8px">
+      <span class="muted">判定のゆるさ</span><select id="sWin"><option value="120">きびしめ</option><option value="200">ふつう</option><option value="300">ゆるめ</option></select>
+      <span class="muted">光の先読み（拍）</span><select id="sLead"><option value="0">なし</option><option value="0.5">0.5</option><option value="1">1</option></select>
+      <span class="muted">MIDIを左右に分ける音</span><select id="sSplit"></select>
+    </div>
+  </div>
+  <div class="card">
+    <h2>データの保存</h2>
+    <p class="muted">練習データはこの端末のブラウザに保存されます。ファイルから開いている場合は消えることがあるので、ときどきバックアップしてください。</p>
+    <div class="row">
+      <button class="b" id="bkSave">💾 バックアップを保存</button>
+      <button class="b" id="bkLoad">📂 バックアップを読み込む</button>
+      <button class="b" id="bkReset" style="color:var(--ng)">すべて消す</button>
+    </div>
+  </div>
+</section>
+</main>
+
+<input type="file" id="file" style="display:none">
+<input type="file" id="bkFile" accept=".json,application/json" style="display:none">
+<div id="toast"></div>
+<div id="modal"><div class="box"><div id="mText" style="margin-bottom:14px"></div><div class="row" style="justify-content:flex-end"><button class="b" id="mNo">やめる</button><button class="b pri" id="mYes">OK</button></div></div></div>
+
+<script>
+'use strict';
+/* =========================================================
+   基本ユーティリティ
+   ========================================================= */
+const $ = id => document.getElementById(id);
+const NJ = ['ド','ド♯','レ','ミ♭','ミ','ファ','ファ♯','ソ','ソ♯','ラ','シ♭','シ'];
+const NE = ['C','C#','D','Eb','E','F','F#','G','Ab','A','Bb','B'];
+const isBlack = p => [1,3,6,8,10].includes(((p%12)+12)%12);
+const oct = p => Math.floor(p/12)-1;
+const pname = (p, mode) => { mode = mode || S().names; if(mode==='none') return ''; return (mode==='en'?NE:NJ)[p%12]; };
+const pfull = p => NJ[p%12]+'（'+NE[p%12]+oct(p)+'）';
+const uid = () => Math.random().toString(36).slice(2,10);
+const r48 = x => Math.round(x*48)/48;
+const today = (d=new Date()) => d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+const esc = s => String(s??'').replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function toast(msg, ms=2600){ const t=$('toast'); t.textContent=msg; t.style.display='block'; clearTimeout(toast.h); toast.h=setTimeout(()=>t.style.display='none', ms); }
+function confirmBox(text){ return new Promise(res=>{ $('mText').textContent=text; $('modal').style.display='flex';
+  const done=v=>{ $('modal').style.display='none'; $('mYes').onclick=$('mNo').onclick=null; res(v); };
+  $('mYes').onclick=()=>done(true); $('mNo').onclick=()=>done(false); }); }
+
+/* =========================================================
+   コード（和音）
+   ========================================================= */
+const PC = {C:0,D:2,E:4,F:5,G:7,A:9,B:11};
+const QUAL = [
+  ['maj7',['maj7','M7','△7','Maj7','ma7','△'],[0,4,7,11]],
+  ['m7b5',['m7b5','m7-5','ø','ø7'],[0,3,6,10]],
+  ['7sus4',['7sus4'],[0,5,7,10]],
+  ['dim7',['dim7','o7'],[0,3,6,9]],
+  ['m7',['m7','min7','-7'],[0,3,7,10]],
+  ['m6',['m6','min6'],[0,3,7,9]],
+  ['add9',['add9'],[0,4,7,14]],
+  ['sus4',['sus4','sus'],[0,5,7]],
+  ['sus2',['sus2'],[0,2,7]],
+  ['dim',['dim','o'],[0,3,6]],
+  ['aug',['aug','+'],[0,4,8]],
+  ['m',['m','min','-'],[0,3,7]],
+  ['9',['9'],[0,4,7,10,14]],
+  ['7',['7'],[0,4,7,10]],
+  ['6',['6'],[0,4,7,9]],
+  ['5',['5'],[0,7]],
+  ['',[''],[0,4,7]],
+];
+function parseChord(name){
+  if(!name) return null;
+  const s = name.trim().replace(/♯/g,'#').replace(/♭/g,'b');
+  const m = s.match(/^([A-G])([#b]?)([^/]*)(?:\/([A-G])([#b]?))?$/);
+  if(!m) return null;
+  const root = (PC[m[1]] + (m[2]==='#'?1:m[2]==='b'?-1:0) + 12) % 12;
+  const q = QUAL.find(([k,al]) => al.includes(m[3]));
+  if(!q) return null;
+  const bass = m[4] ? (PC[m[4]] + (m[5]==='#'?1:m[5]==='b'?-1:0) + 12) % 12 : null;
+  return {root, qual:q[0], iv:q[2], bass, key: NE[root]+q[0]};
+}
+// 左手の押さえ方（ドの下〜付近、基本形）
+function voicing(ch){
+  let r = 48 + ch.root; // C3〜B3
+  const iv = ch.iv.map(x => x>=12 ? x-12 : x);
+  const set = [...new Set(iv)].sort((a,b)=>a-b).slice(0,4);
+  return set.map(x => r + x);
+}
+function chordRootNote(ch){ return 48 + (ch.bass!=null ? ch.bass : ch.root); }
+const CURRIC = ['C','G','F','Am','D','Em','Dm','E','A','G7','D7','E7','A7','Bm','B7','Cmaj7','Fmaj7','Am7','Bb','Eb'];
+
+/* =========================================================
+   データ保存
+   ========================================================= */
+const KEY = 'pianoRenshuu.v1';
+const DEF_SETTINGS = {inName:'', outName:'', chR:4, chL:3, vel:1, accOut:'tab', vol:70, names:'ja', win:200, lead:0.5, split:60};
+let DB;
+function S(){ return DB.settings; }
+function load(){
+  try{ DB = JSON.parse(localStorage.getItem(KEY)); }catch(e){ DB=null; }
+  if(!DB || !DB.songs) DB = {v:1, songs:[], learned:{}, sessions:[], prog:{}, barMiss:{}, recs:[], lastSong:null, seeded:false};
+  DB.settings = Object.assign({}, DEF_SETTINGS, DB.settings||{});
+  seed();
+}
+let saveTimer;
+function save(){ _lpCache && _lpCache.clear(); clearTimeout(saveTimer); saveTimer = setTimeout(()=>{ try{ localStorage.setItem(KEY, JSON.stringify(DB)); }catch(e){ toast('保存できませんでした（容量不足の可能性）。バックアップを保存してください。'); } }, 200); }
+
+/* =========================================================
+   曲データ
+   song = {id,title,artist,stage,target,bpm,num,den,notes:[{t,d,p,h,f}],chords:[{t,name}],barStarts:[],issues:[],builtin}
+   時間はすべて「拍（4分音符=1）」
+   ========================================================= */
+const barLenOf = (num,den) => num*4/den;
+function regularBars(song, endBeat){
+  const L = barLenOf(song.num, song.den); const a=[]; for(let t=0; t<endBeat-1e-6 || a.length===0; t+=L) a.push(r48(t)); return a;
+}
+function songEnd(song){
+  let e = 0; song.notes.forEach(n=>e=Math.max(e,n.t+n.d)); song.chords.forEach(c=>e=Math.max(e,c.t+0.01));
+  const bs = song.barStarts||[]; const L = barLenOf(song.num,song.den);
+  if(bs.length) e = Math.max(e, bs[bs.length-1] + L);
+  return e;
+}
+function ensureBars(song){
+  const L = barLenOf(song.num,song.den);
+  let e = 0; song.notes.forEach(n=>e=Math.max(e,n.t+n.d)); song.chords.forEach(c=>e=Math.max(e,c.t+0.01));
+  if(!song.barStarts || !song.barStarts.length){ song.barStarts = regularBars(song, Math.max(e, L)); return; }
+  const bs = song.barStarts;
+  while(bs[bs.length-1] + L < e - 1e-6) bs.push(r48(bs[bs.length-1] + L));
+}
+function barOf(song, t){ const bs=song.barStarts; let lo=0,hi=bs.length-1; while(lo<hi){ const m=(lo+hi+1)>>1; if(bs[m]<=t+1e-6) lo=m; else hi=m-1; } return lo; }
+function barStart(song,i){ return song.barStarts[i]; }
+function barEnd(song,i){ return i+1<song.barStarts.length ? song.barStarts[i+1] : song.barStarts[i]+barLenOf(song.num,song.den); }
+function chordAt(song, t){ let c=null; for(const x of song.chords){ if(x.t<=t+1e-6) c=x; else break; } return c; }
+function sortSong(song){ song.notes.sort((a,b)=>a.t-b.t||a.p-b.p); song.chords.sort((a,b)=>a.t-b.t); }
+function songChordKeys(song){ const s=new Set(); song.chords.forEach(c=>{ const p=parseChord(c.name); if(p) s.add(p.key); }); return [...s]; }
+
+// 簡易記法から曲を作る： "E4:1 r:1 [C4 E4]:2 | ..."
+function fromText(meta, melody, chordStr, leftStr){
+  const song = Object.assign({id:uid(), artist:'', stage:1, target:false, bpm:90, num:4, den:4, notes:[], chords:[], issues:[]}, meta);
+  const parseLine = (str, hand) => { let t=0;
+    str.replace(/\|/g,' ').trim().split(/\s+/).filter(Boolean).forEach(tok=>{
+      const [ps, ds, fs] = tok.split(':'); const d = eval_d(ds);
+      if(ps!=='r'){ ps.replace(/[\[\]]/g,'').split(',').forEach((pp,i)=>{ const p=noteNum(pp); if(p!=null) song.notes.push({t:r48(t), d, p, h:hand, f: fs? +fs.split(',')[i]||undefined : undefined}); }); }
+      t += d; }); };
+  if(melody) parseLine(melody,'R');
+  if(leftStr) parseLine(leftStr,'L');
+  if(chordStr) applyChordText(song, chordStr);
+  ensureBars(song); sortSong(song); return song;
+}
+function eval_d(ds){ if(!ds) return 1; if(ds.includes('/')){ const [a,b]=ds.split('/'); return +a/+b; } return +ds; }
+function noteNum(s){ const m = s.match(/^([A-G])([#b]?)(-?\d)$/); if(!m) return null; return (+m[3]+1)*12 + PC[m[1]] + (m[2]==='#'?1:m[2]==='b'?-1:0); }
+
+function applyChordText(song, text){
+  const bad=[]; const chords=[]; const L = barLenOf(song.num, song.den);
+  if(!song.barStarts || !song.barStarts.length) song.barStarts=[0];
+  const bars = text.replace(/\n/g,'|').split('|').map(s=>s.trim());
+  // 末尾の空要素を除く
+  while(bars.length && bars[bars.length-1]==='') bars.pop();
+  bars.forEach((b,i)=>{
+    while(song.barStarts.length<=i) song.barStarts.push(r48(song.barStarts[song.barStarts.length-1]+L));
+    const st = song.barStarts[i], en = i+1<song.barStarts.length ? song.barStarts[i+1] : st+L;
+    const toks = b.split(/\s+/).filter(x=>x && x!=='-' && x!=='%');
+    if(b.trim()==='%'){ if(chords.length) chords.push({t:r48(st), name:chords[chords.length-1].name}); return; }
+    toks.forEach((tk,j)=>{ if(!parseChord(tk)) bad.push(tk); else chords.push({t:r48(st + (en-st)*j/toks.length), name:tk}); });
+  });
+  song.chords = chords; return bad;
+}
+function chordText(song){
+  if(!song.barStarts) return '';
+  const out=[]; for(let i=0;i<song.barStarts.length;i++){ const s=barStart(song,i), e=barEnd(song,i);
+    const cs = song.chords.filter(c=>c.t>=s-1e-6 && c.t<e-1e-6).map(c=>c.name); out.push(cs.length?cs.join(' '):'-'); }
+  while(out.length && out[out.length-1]==='-') out.pop();
+  const lines=[]; for(let i=0;i<out.length;i+=4) lines.push(out.slice(i,i+4).join(' | '));
+  return lines.join(' |\n');
+}
+
+/* ---------- 内蔵曲（オリジナル練習曲・著作権の切れた曲） ---------- */
+function builtins(){
+  const b = [];
+  b.push(fromText({id:'b-yubi', title:'指ならし 1・2・3・4・5', artist:'練習曲', stage:1, bpm:80, builtin:true},
+    'C4:1:1 D4:1:2 E4:1:3 F4:1:4 | G4:1:5 F4:1:4 E4:1:3 D4:1:2 | C4:1:1 E4:1:3 D4:1:2 F4:1:4 | E4:1:3 G4:1:5 F4:1:4 D4:1:2 | C4:4:1',
+    'C | G | C | G | C'));
+  b.push(fromText({id:'b-kira', title:'きらきら星', artist:'フランス民謡', stage:1, bpm:90, builtin:true},
+    'C4:1 C4:1 G4:1 G4:1 | A4:1 A4:1 G4:2 | F4:1 F4:1 E4:1 E4:1 | D4:1 D4:1 C4:2 | G4:1 G4:1 F4:1 F4:1 | E4:1 E4:1 D4:2 | G4:1 G4:1 F4:1 F4:1 | E4:1 E4:1 D4:2 | C4:1 C4:1 G4:1 G4:1 | A4:1 A4:1 G4:2 | F4:1 F4:1 E4:1 E4:1 | D4:1 D4:1 C4:2',
+    'C | F C | F C | G C | C F | C G | C F | C G | C | F C | F C | G C'));
+  b.push(fromText({id:'b-yoro', title:'よろこびの歌', artist:'ベートーヴェン', stage:1, bpm:96, builtin:true},
+    'E4:1 E4:1 F4:1 G4:1 | G4:1 F4:1 E4:1 D4:1 | C4:1 C4:1 D4:1 E4:1 | E4:1.5 D4:0.5 D4:2 | E4:1 E4:1 F4:1 G4:1 | G4:1 F4:1 E4:1 D4:1 | C4:1 C4:1 D4:1 E4:1 | D4:1.5 C4:0.5 C4:2',
+    'C | G | C | G | C | G | C | G C'));
+  b.push(fromText({id:'b-3ch', title:'3つの和音 G・C・D', artist:'練習曲', stage:2, bpm:84, builtin:true},
+    'G4:4 | E4:4 | F#4:4 | G4:4 | B4:4 | C5:4 | A4:4 | G4:4',
+    'G | C | D | G | G | C | D | G'));
+  b.push(fromText({id:'b-60s', title:'60年代の進行 C・Am・F・G', artist:'練習曲', stage:3, bpm:88, builtin:true},
+    'E4:2 G4:2 | E4:2 C4:2 | F4:2 A4:2 | G4:2 D4:2 | E4:2 G4:2 | C5:2 A4:2 | A4:2 F4:2 | G4:4',
+    'C | Am | F | G | C | Am | F | G'));
+  const arp = (c) => { const v = voicing(parseChord(c)); return [v[0],v[1],v[2],v[1],v[2],v[1]].map(p=>NE[p%12]+oct(p)+':0.5').join(' '); };
+  b.push(fromText({id:'b-arp', title:'分散和音 Am・C・D・F', artist:'練習曲', stage:4, bpm:72, num:6, den:8, builtin:true},
+    'E5:1.5 E5:1.5 | G5:1.5 E5:1.5 | F#5:3 | A5:1.5 F5:1.5 | E5:1.5 C6:1.5 | G5:1.5 E5:1.5 | D5:3 | E5:3',
+    'Am | C | D | F | Am | C | D | Am',
+    ['Am','C','D','F','Am','C','D','Am'].map(arp).join(' | ')));
+  return b;
+}
+const PLACEHOLDERS = [
+  ['ラヴ・ミー・ドゥ','ザ・ビートルズ',1],['イエロー・サブマリン','ザ・ビートルズ',1],
+  ['ツイスト・アンド・シャウト','ザ・ビートルズ',2],['ラ・バンバ','リッチー・ヴァレンス',2],['アイム・ア・ビリーバー','ザ・モンキーズ',2],
+  ['スタンド・バイ・ミー','ベン・E・キング',3],
+  ['朝日のあたる家','アニマルズ',4],
+  ['ヘイ・ジュード','ザ・ビートルズ',5],['恋の終列車','ザ・モンキーズ',5],
+  ['デイドリーム・ビリーバー','ザ・モンキーズ',5,true],['プレザント・バレー・サンデー','ザ・モンキーズ',5,true],
+];
+function seed(){
+  const bi = builtins();
+  bi.forEach(s=>{ const i = DB.songs.findIndex(x=>x.id===s.id); if(i<0) DB.songs.push(s); });
+  if(!DB.seeded){
+    PLACEHOLDERS.forEach(([title,artist,stage,target],i)=>DB.songs.push({id:'p-'+i, title, artist, stage, target:!!target, bpm:100, num:4, den:4, notes:[], chords:[], barStarts:[0], issues:[]}));
+    DB.seeded = true; save();
+  }
+}
+function getSong(id){ return DB.songs.find(s=>s.id===id); }
+function hasData(s){ return s.notes.length>0 || s.chords.length>0; }
+
+/* =========================================================
+   練習レベル
+   ========================================================= */
+const LEVELS = [
+  {n:1, name:'Lv1 右手メロディ'},
+  {n:2, name:'Lv2 左手ルート音'},
+  {n:3, name:'Lv3 左手和音'},
+  {n:4, name:'Lv4 両手'},
+  {n:5, name:'Lv5 楽譜どおり'},
+];
+function groupOnsets(notes){ const g=[]; for(const n of [...notes].sort((a,b)=>a.t-b.t||a.p-b.p)){ const last=g[g.length-1]; if(last && n.t-last.t<0.06) last.notes.push(n); else g.push({t:n.t, notes:[n]}); } return g; }
+function melodyOf(song){ return groupOnsets(song.notes.filter(n=>n.h==='R')).map(g=>g.notes.reduce((a,b)=>b.p>a.p?b:a)); }
+function chordSpans(song){ const end=songEnd(song); return song.chords.map((c,i)=>({c, p:parseChord(c.name), t:c.t, d:(i+1<song.chords.length?song.chords[i+1].t:end)-c.t})).filter(x=>x.p && x.d>0); }
+function leftRoots(song){
+  if(song.chords.length) return chordSpans(song).map(x=>({t:x.t, d:x.d, p:chordRootNote(x.p), h:'L'}));
+  return groupOnsets(song.notes.filter(n=>n.h==='L')).map(g=>g.notes.reduce((a,b)=>b.p<a.p?b:a));
+}
+function leftChords(song){
+  if(song.chords.length) return chordSpans(song).flatMap(x=>voicing(x.p).map(p=>({t:x.t, d:x.d, p, h:'L'})));
+  return song.notes.filter(n=>n.h==='L');
+}
+function levelAvail(song, lv){
+  const R = song.notes.some(n=>n.h==='R'), L = song.notes.some(n=>n.h==='L'), C = song.chords.some(c=>parseChord(c.name));
+  if(lv===1) return R; if(lv===2||lv===3) return L||C; if(lv===4) return R&&(L||C); return R||L||C;
+}
+const _lpCache = new Map();
+function levelParts(song, lv){
+  const key = song.id+'|'+lv+'|'+song.notes.length+'|'+song.chords.length+'|'+(song._v||0);
+  if(_lpCache.has(key)) return _lpCache.get(key);
+  const r = levelParts0(song, lv); if(_lpCache.size>40) _lpCache.clear(); _lpCache.set(key, r); return r;
+}
+function levelParts0(song, lv){
+  const R = song.notes.filter(n=>n.h==='R'), Ls = song.notes.filter(n=>n.h==='L');
+  const hasL = Ls.length>0;
+  switch(lv){
+    case 1: return {play: melodyOf(song), acc: hasL ? Ls : leftChords(song)};
+    case 2: return {play: leftRoots(song), acc: R};
+    case 3: return {play: leftChords(song), acc: R};
+    case 4: return {play: [...melodyOf(song), ...leftChords(song)], acc: []};
+    default: return {play: [...R, ...(hasL ? Ls : leftChords(song))], acc: []};
+  }
+}
+
+/* =========================================================
+   音（タブレット側）
+   ========================================================= */
+let AC=null, master=null;
+function audio(){
+  if(!AC){ AC = new (window.AudioContext||window.webkitAudioContext)(); master = AC.createGain(); master.connect(AC.destination); }
+  if(AC.state==='suspended') AC.resume();
+  master.gain.value = S().vol/100*0.5;
+  return AC;
+}
+const msToAc = ms => AC.currentTime + Math.max(0,(ms - performance.now())/1000);
+function synth(p, atMs, durMs, vel=80){
+  audio(); const t0 = msToAc(atMs), dur=Math.max(0.12, durMs/1000);
+  const f = 440*Math.pow(2,(p-69)/12);
+  const g = AC.createGain(); g.connect(master);
+  const v = (vel/127)*0.35;
+  g.gain.setValueAtTime(0.0001,t0); g.gain.exponentialRampToValueAtTime(v,t0+0.008);
+  g.gain.exponentialRampToValueAtTime(v*0.35,t0+Math.min(0.4,dur)); g.gain.exponentialRampToValueAtTime(0.0001,t0+dur+0.25);
+  [[1,'triangle',1],[2,'sine',0.25],[3,'sine',0.08]].forEach(([m,type,a])=>{
+    const o=AC.createOscillator(); o.type=type; o.frequency.value=f*m; const og=AC.createGain(); og.gain.value=a; o.connect(og); og.connect(g); o.start(t0); o.stop(t0+dur+0.3); });
+}
+function click(atMs, accent){
+  audio(); const t0=msToAc(atMs); const o=AC.createOscillator(), g=AC.createGain();
+  o.frequency.value = accent?1600:1100; o.type='square'; g.gain.setValueAtTime(0.0001,t0); g.gain.exponentialRampToValueAtTime(0.25,t0+0.002); g.gain.exponentialRampToValueAtTime(0.0001,t0+0.05);
+  o.connect(g); g.connect(master); o.start(t0); o.stop(t0+0.06);
+}
+// 伴奏の音を鳴らす（出力先は設定による）
+function playAcc(p, atMs, durMs, vel=70){
+  if(S().accOut==='kb' && MIDI.out){ midiSend([0x90, p, vel], atMs); midiSend([0x80, p, 0], atMs+durMs*0.95); }
+  else synth(p, atMs, durMs, vel);
+}
+
+/* =========================================================
+   MIDI 接続
+   ========================================================= */
+const MIDI = {access:null, in:null, out:null};
+const held = new Set();
+const lit = new Map(); // key "ch:p" -> true
+function midiSend(data, atMs){ if(!MIDI.out) return; try{ atMs ? MIDI.out.send(data, atMs) : MIDI.out.send(data); }catch(e){} }
+function lightOn(p, hand, atMs){ if(!MIDI.out) return; const ch=(hand==='L'?S().chL:S().chR)-1; midiSend([0x90|ch, p, S().vel], atMs); if(!atMs) lit.set(ch+':'+p,true); }
+function lightOff(p, hand, atMs){ if(!MIDI.out) return; const ch=(hand==='L'?S().chL:S().chR)-1; midiSend([0x80|ch, p, 0], atMs); lit.delete(ch+':'+p); }
+function allLightsOff(){
+  if(!MIDI.out) return; try{ MIDI.out.clear && MIDI.out.clear(); }catch(e){}
+  for(const k of lit.keys()){ const [ch,p]=k.split(':').map(Number); midiSend([0x80|ch,p,0]); }
+  lit.clear(); [S().chR-1, S().chL-1, 0].forEach(ch=>{ midiSend([0xB0|ch,123,0]); });
+}
+async function connect(){
+  if(!navigator.requestMIDIAccess){ toast('このブラウザはキーボード接続に対応していません。Chromeで開いてください。',5000); return; }
+  try{
+    MIDI.access = await navigator.requestMIDIAccess({sysex:false});
+    MIDI.access.onstatechange = () => pickPorts();
+    pickPorts();
+  }catch(e){
+    toast(e.name==='SecurityError' ? 'この表示方法では接続できません。HTMLファイルをChromeで直接開いてください。' : '接続が許可されませんでした（'+e.name+'）。ChromeのサイトのMIDI設定を確認してください。', 6000);
+  }
+}
+function pickPorts(){
+  if(!MIDI.access) return;
+  const ins=[...MIDI.access.inputs.values()], outs=[...MIDI.access.outputs.values()];
+  const pref = (list, name) => list.find(x=>x.name===name) || list.find(x=>/casio|lk/i.test(x.name)) || list[0] || null;
+  if(MIDI.in) MIDI.in.onmidimessage=null;
+  MIDI.in = pref(ins, S().inName); MIDI.out = pref(outs, S().outName);
+  if(MIDI.in) MIDI.in.onmidimessage = onMidi;
+  const fill = (sel, list, cur) => { sel.innerHTML = list.length ? list.map(x=>`<option ${x===cur?'selected':''}>${esc(x.name)}</option>`).join('') : '<option>（なし）</option>'; };
+  fill($('sIn'), ins, MIDI.in); fill($('sOut'), outs, MIDI.out);
+  const c=$('conn');
+  if(MIDI.in){ c.textContent='🟢 '+MIDI.in.name; c.className='ok'; } else { c.textContent='⚪ キーボードが見つかりません'; c.className=''; }
+}
+function onMidi(e){
+  const [st,d1,d2] = e.data; const cmd = st & 0xF0;
+  if(cmd===0x90 && d2>0) noteOn(d1, d2, 'kb');
+  else if(cmd===0x80 || (cmd===0x90 && d2===0)) noteOff(d1, 'kb');
+}
+
+/* ---------- 入力の振り分け ---------- */
+let curTab = 'today';
+function noteOn(p, v=90, src){
+  held.add(p);
+  if(src==='screen'){ synth(p, performance.now(), 400, v); }
+  if(REC.on) REC.ev.push([performance.now()-REC.t0, 1, p, v]);
+  if(curTab==='practice' && P.running) P.onNote(p);
+  else if(curTab==='edit') ED.onNote(p);
+  else if(curTab==='chords') CM.onNote(p);
+  kbRefresh();
+}
+function noteOff(p, src){
+  held.delete(p);
+  if(REC.on) REC.ev.push([performance.now()-REC.t0, 0, p, 0]);
+  if(curTab==='edit') ED.onOff(p);
+  kbRefresh();
+}
+
+/* =========================================================
+   画面の鍵盤（DOM）
+   ========================================================= */
+const domKbs = [];
+function makeKb(el, lo, hi, opts={}){
+  el.innerHTML=''; let whites=0; for(let p=lo;p<=hi;p++) if(!isBlack(p)) whites++;
+  const W=100/whites; let wi=0; const keys={};
+  for(let p=lo;p<=hi;p++){
+    const k=document.createElement('div');
+    if(isBlack(p)){ k.className='k'; k.style.left=(wi*W-W*0.32)+'%'; k.style.width=(W*0.64)+'%'; }
+    else { k.className='w'; k.style.left=(wi*W)+'%'; k.style.width=W+'%'; if(p%12===0){ const l=document.createElement('span'); l.className='lb'; l.textContent='C'+oct(p); k.appendChild(l);} wi++; }
+    if(!opts.noPlay){
+      k.addEventListener('pointerdown', ev=>{ ev.preventDefault(); noteOn(p, 90, 'screen'); });
+      k.addEventListener('pointerup', ()=>noteOff(p,'screen')); k.addEventListener('pointerleave', ()=>{ if(held.has(p)) noteOff(p,'screen'); });
+    }
+    el.appendChild(k); keys[p]=k;
+  }
+  const o = {keys, marks:new Set(), setMarks(s){ this.marks=new Set(s); kbRefresh(); }};
+  domKbs.push(o); return o;
+}
+function kbRefresh(){ domKbs.forEach(o=>{ for(const p in o.keys){ const k=o.keys[p]; k.classList.toggle('held', held.has(+p)); k.classList.toggle('mark', o.marks.has(+p)); } }); }
+
+/* =========================================================
+   読み込み：ZIP（.mxl） / MusicXML / MIDI
+   ========================================================= */
+async function inflateRaw(u8){
+  const ds = new DecompressionStream('deflate-raw');
+  return new Uint8Array(await new Response(new Blob([u8]).stream().pipeThrough(ds)).arrayBuffer());
+}
+async function unzip(buf){
+  const u8 = new Uint8Array(buf), dv = new DataView(buf); let eocd=-1;
+  for(let i=u8.length-22;i>=Math.max(0,u8.length-66000);i--){ if(dv.getUint32(i,true)===0x06054b50){ eocd=i; break; } }
+  if(eocd<0) throw new Error('ZIPの形式を読めませんでした');
+  const n = dv.getUint16(eocd+10,true); let off = dv.getUint32(eocd+16,true); const files={};
+  const dec = new TextDecoder();
+  for(let i=0;i<n;i++){
+    if(dv.getUint32(off,true)!==0x02014b50) break;
+    const method=dv.getUint16(off+10,true), csize=dv.getUint32(off+20,true), nl=dv.getUint16(off+28,true), el=dv.getUint16(off+30,true), cl=dv.getUint16(off+32,true), lo=dv.getUint32(off+42,true);
+    const name = dec.decode(u8.subarray(off+46, off+46+nl));
+    const lnl=dv.getUint16(lo+26,true), lel=dv.getUint16(lo+28,true); const start=lo+30+lnl+lel;
+    files[name] = {method, data:u8.subarray(start, start+csize)};
+    off += 46+nl+el+cl;
+  }
+  return {files, async get(name){ const f=files[name]; if(!f) return null; return f.method===0 ? f.data : await inflateRaw(f.data); }};
+}
+function decodeText(u8){
+  if(u8[0]===0xFF && u8[1]===0xFE) return new TextDecoder('utf-16le').decode(u8);
+  if(u8[0]===0xFE && u8[1]===0xFF) return new TextDecoder('utf-16be').decode(u8);
+  return new TextDecoder('utf-8').decode(u8);
+}
+async function readScoreFile(file){
+  const buf = await file.arrayBuffer(); const u8=new Uint8Array(buf); const name=file.name.replace(/\.[^.]+$/,'');
+  if(u8[0]===0x4D && u8[1]===0x54 && u8[2]===0x68 && u8[3]===0x64) return parseMidi(buf, name);
+  if(u8[0]===0x50 && u8[1]===0x4B){
+    const z = await unzip(buf); let root=null;
+    const cont = await z.get('META-INF/container.xml');
+    if(cont){ const m = decodeText(cont).match(/full-path="([^"]+)"/); if(m) root=m[1]; }
+    if(!root) root = Object.keys(z.files).find(f=>!f.startsWith('META-INF') && /\.(xml|musicxml)$/i.test(f));
+    if(!root) throw new Error('MXLの中に楽譜が見つかりません');
+    return parseMusicXML(decodeText(await z.get(root)), name);
+  }
+  return parseMusicXML(decodeText(u8), name);
+}
+
+const KIND = {major:'',minor:'m',dominant:'7','major-seventh':'maj7','minor-seventh':'m7',diminished:'dim','diminished-seventh':'dim7',augmented:'aug','half-diminished':'m7b5','suspended-fourth':'sus4','suspended-second':'sus2','major-sixth':'6','minor-sixth':'m6','dominant-ninth':'9','major-ninth':'maj7','minor-ninth':'m7','dominant-11th':'7','dominant-13th':'7',power:'5','augmented-seventh':'7','major-minor':'m',none:null};
+function parseMusicXML(text, fname){
+  const doc = new DOMParser().parseFromString(text, 'application/xml');
+  if(doc.querySelector('parsererror')) throw new Error('MusicXMLとして読めませんでした');
+  const score = doc.querySelector('score-partwise');
+  if(!score) throw new Error(doc.querySelector('score-timewise') ? 'この形式（timewise）には未対応です' : 'MusicXMLの楽譜が見つかりません');
+  const kid = (el, tag) => { for(const c of el.children) if(c.tagName===tag) return c; return null; };
+  const txt = (el, sel) => { const x = el.querySelector(sel); return x ? x.textContent.trim() : null; };
+  const title = txt(score,'work > work-title') || txt(score,'movement-title') || fname;
+  const parts = [...score.querySelectorAll(':scope > part')].filter(p=>p.querySelector('note pitch'));
+  if(!parts.length) throw new Error('音符が見つかりません');
+  const song = {id:uid(), title, artist: txt(score,'identification > creator[type="composer"]')||'', stage:1, target:false, bpm:100, num:4, den:4, notes:[], chords:[], barStarts:[], issues:[]};
+  let bpmSet=false, tsSet=false;
+  // パートごとの段数
+  const stavesOf = p => { const s=p.querySelector('attributes > staves'); return s?+s.textContent:1; };
+  const twoStaff = stavesOf(parts[0])>=2;
+  parts.slice(0, twoStaff?1:2).forEach((part, pi) => {
+    let div=1, num=4, den=4, mStart=0;
+    const measures = [...part.children].filter(c=>c.tagName==='measure');
+    measures.forEach((meas, mi) => {
+      let cur=0, maxc=0, lastOn=0; const ends={};
+      for(const el of meas.children){
+        const tag = el.tagName;
+        if(tag==='attributes'){
+          const d=kid(el,'divisions'); if(d) div=+d.textContent;
+          const tm=kid(el,'time'); if(tm){ const b=kid(tm,'beats'), bt=kid(tm,'beat-type'); if(b&&bt){ num=parseInt(b.textContent)||4; den=+bt.textContent||4; if(!tsSet){ song.num=num; song.den=den; tsSet=true; } } }
+        } else if(tag==='backup'){ cur -= +(txt(el,'duration')||0); }
+        else if(tag==='forward'){ cur += +(txt(el,'duration')||0); maxc=Math.max(maxc,cur); }
+        else if(tag==='direction' || tag==='sound'){
+          const s = tag==='sound'? el : el.querySelector('sound'); const pm = el.querySelector('per-minute');
+          if(!bpmSet && s && s.getAttribute('tempo')){ song.bpm=Math.round(+s.getAttribute('tempo')); bpmSet=true; }
+          else if(!bpmSet && pm){ song.bpm=Math.round(+pm.textContent)||100; bpmSet=true; }
+        }
+        else if(tag==='harmony' && pi===0){
+          const step=txt(el,'root > root-step'); if(step){
+            const alt=+(txt(el,'root > root-alter')||0); const kindEl=el.querySelector('kind');
+            let suf = kindEl ? KIND[kindEl.textContent.trim()] : '';
+            if(suf===undefined) suf = ''; if(suf===null) continue;
+            const bstep=txt(el,'bass > bass-step'), balt=+(txt(el,'bass > bass-alter')||0);
+            const nm = step+(alt>0?'#':alt<0?'b':'')+suf+(bstep? '/'+bstep+(balt>0?'#':balt<0?'b':''):'');
+            const off = +(txt(el,'offset')||0);
+            song.chords.push({t:r48(mStart+(cur+off)/div), name:nm});
+          }
+        }
+        else if(tag==='note'){
+          if(kid(el,'grace') || kid(el,'cue')) continue;
+          const dur = +(txt(el,'duration')||0);
+          const isChord = !!kid(el,'chord');
+          const on = isChord ? lastOn : cur;
+          if(!isChord){ lastOn = cur; cur += dur; maxc=Math.max(maxc,cur); const sk=(txt(el,'staff')||'1'); ends[sk]=Math.max(ends[sk]||0, cur); }
+          const pitch = kid(el,'pitch'); if(!pitch) continue;
+          const step=txt(pitch,'step'), alter=+(txt(pitch,'alter')||0), o=+txt(pitch,'octave');
+          const p = Math.round((o+1)*12 + PC[step] + alter);
+          const staff = +(txt(el,'staff')||1);
+          const h = twoStaff ? (staff>=2?'L':'R') : (pi===0?'R':'L');
+          const t = r48(mStart + on/div), d = r48(dur/div);
+          const fing = el.querySelector('notations technical fingering');
+          const ties = [...el.querySelectorAll(':scope > tie')].map(x=>x.getAttribute('type'));
+          if(ties.includes('stop')){
+            const prev = [...song.notes].reverse().find(n=>n.p===p && n.h===h && Math.abs(n.t+n.d-t)<0.02);
+            if(prev){ prev.d = r48(prev.d + d); continue; }
+          }
+          if(d>0) song.notes.push({t, d, p, h, f: fing? +fing.textContent||undefined : undefined});
+        }
+      }
+      const expected = barLenOf(num, den), actual = maxc/div;
+      const pickup = (mi===0 || meas.getAttribute('implicit')==='yes') && actual < expected - 0.02;
+      let len = pickup ? actual : expected;
+      const staffBad = Object.values(ends).some(e => Math.abs(e/div - (pickup?actual:expected)) > 0.02);
+      if(pi===0 && (staffBad || (!pickup && Math.abs(actual-expected) > 0.02))) song.issues.push(mi);
+      if(pi===0) song.barStarts.push(r48(mStart));
+      mStart = r48(mStart + len);
+    });
+  });
+  if(!song.barStarts.length) song.barStarts=[0];
+  ensureBars(song); sortSong(song);
+  song.repeats = !!score.querySelector('repeat, ending');
+  return song;
+}
+
+function parseMidi(buf, fname){
+  const dv = new DataView(buf); let pos=0;
+  const str4 = () => String.fromCharCode(dv.getUint8(pos),dv.getUint8(pos+1),dv.getUint8(pos+2),dv.getUint8(pos+3));
+  if(str4()!=='MThd') throw new Error('MIDIファイルではありません');
+  const hl=dv.getUint32(pos+4); const ntr=dv.getUint16(pos+10), division=dv.getUint16(pos+12); pos += 8+hl;
+  if(division & 0x8000) throw new Error('この時間形式のMIDIには未対応です');
+  const tpq = division; let bpm=null, num=4, den=4, tsSet=false, title=null; const tracks=[];
+  for(let ti=0; ti<ntr && pos<buf.byteLength-8; ti++){
+    if(str4()!=='MTrk'){ break; }
+    const len=dv.getUint32(pos+4); let p=pos+8; const end=p+len; pos=end;
+    let tick=0, run=0; const notes=[]; const act={};
+    const vlq = () => { let v=0,b; do{ b=dv.getUint8(p++); v=(v<<7)|(b&0x7f); }while(b&0x80); return v; };
+    while(p<end){
+      tick += vlq(); let st=dv.getUint8(p);
+      if(st & 0x80){ p++; if(st<0xF0) run=st; } else st=run;
+      if(st===0xFF){ const type=dv.getUint8(p++); const l=vlq();
+        if(type===0x51 && bpm==null){ const us=(dv.getUint8(p)<<16)|(dv.getUint8(p+1)<<8)|dv.getUint8(p+2); bpm=Math.round(60000000/us); }
+        else if(type===0x58 && !tsSet){ num=dv.getUint8(p); den=Math.pow(2,dv.getUint8(p+1)); tsSet=true; }
+        else if(type===0x03 && !title && ti===0){ title=new TextDecoder().decode(new Uint8Array(buf,p,l)).trim()||null; }
+        p+=l; continue; }
+      if(st===0xF0||st===0xF7){ const l=vlq(); p+=l; continue; }
+      const cmd=st&0xF0, ch=st&0x0F;
+      if(cmd===0xC0||cmd===0xD0){ p+=1; continue; }
+      const a=dv.getUint8(p), b=dv.getUint8(p+1); p+=2;
+      if(ch===9) continue;
+      const key=ch*128+a;
+      if(cmd===0x90 && b>0){ if(act[key]!=null) notes.push({t:act[key], e:tick, p:a}); act[key]=tick; }
+      else if(cmd===0x80 || (cmd===0x90 && b===0)){ if(act[key]!=null){ notes.push({t:act[key], e:tick, p:a}); delete act[key]; } }
+    }
+    if(notes.length) tracks.push(notes);
+  }
+  if(!tracks.length) throw new Error('音符が見つかりません');
+  const song = {id:uid(), title: title||fname, artist:'', stage:1, target:false, bpm:bpm||100, num, den, notes:[], chords:[], issues:[]};
+  const conv = (n,h) => ({t:r48(n.t/tpq), d:Math.max(1/8, r48((n.e-n.t)/tpq)), p:n.p, h});
+  if(tracks.length>=2){
+    const avg = tr => tr.reduce((s,n)=>s+n.p,0)/tr.length;
+    const sorted = [...tracks].sort((a,b)=>avg(b)-avg(a));
+    sorted[0].forEach(n=>song.notes.push(conv(n,'R')));
+    sorted.slice(1).forEach(tr=>tr.forEach(n=>song.notes.push(conv(n,'L'))));
+  } else tracks[0].forEach(n=>song.notes.push(conv(n, n.p>=S().split?'R':'L')));
+  ensureBars(song); sortSong(song);
+  return song;
+}
+
+let importTarget = null; // 置き換える曲のid（null なら新規）
+function startImport(targetId){ importTarget = targetId; $('file').value=''; $('file').click(); }
+$('file').addEventListener('change', async e=>{
+  const f = e.target.files[0]; if(!f) return;
+  try{
+    const s = await readScoreFile(f);
+    if(importTarget){
+      const old = getSong(importTarget);
+      Object.assign(s, {id:old.id, title:old.title, artist:old.artist||s.artist, stage:old.stage, target:old.target});
+      if(!s.chords.length && old.chords.length) s.chords = old.chords;
+      DB.songs[DB.songs.indexOf(old)] = s;
+    } else DB.songs.push(s);
+    save(); renderSongs();
+    const msg = [`「${s.title}」を読み込みました（${s.notes.length}音・${s.barStarts.length}小節）。`];
+    if(s.issues.length) msg.push(`拍数が合わない小節が ${s.issues.length} か所あります。`);
+    if(s.repeats) msg.push('リピート記号は展開されません。');
+    toast(msg.join(' '), 6000);
+    openEditor(s.id);
+  }catch(err){ toast('読み込めませんでした：'+err.message, 6000); }
+});
+
+/* =========================================================
+   練習エンジン
+   ========================================================= */
+const P = {
+  running:false, song:null, lv:1, mode:'wait', speed:0.6, from:0, to:0,
+  steps:[], idx:0, play:[], acc:[], timers:[], viewBeat:0, curBeat:0,
+  startMs:0, msPerBeat:500, wrong:0, hits:0, total:0, passStart:0, sessionStart:0, schedIdx:0, events:[], tick:null, flashTimer:null,
+};
+function pSettingsFromUI(){
+  P.song = getSong($('pSong').value); P.speed = +$('pSpeed').value/100;
+  P.from = +$('pFrom').value; P.to = +$('pTo').value; if(P.to<P.from) P.to=P.from;
+}
+function loopRange(){ return [barStart(P.song,P.from), barEnd(P.song,P.to)]; }
+function prepare(){
+  const s=P.song; const parts = levelParts(s, P.lv); const [a,b]=loopRange();
+  const inR = n => n.t>=a-1e-6 && n.t<b-1e-6;
+  P.play = parts.play.filter(inR).map(n=>({...n, st:0}));
+  P.acc = $('oAcc').checked ? parts.acc.filter(inR) : [];
+  P.steps = groupOnsets(P.play).map(g=>({t:g.t, notes:g.notes, got:new Set(), bad:false}));
+  P.idx=0; P.wrong=0; P.hits=0; P.total = P.mode==='wait' ? P.steps.length : P.play.length;
+  P.msPerBeat = 60000/(s.bpm*P.speed);
+}
+function clearTimers(){ P.timers.forEach(clearTimeout); P.timers=[]; if(P.tick){ clearInterval(P.tick); P.tick=null; } }
+function startPractice(){
+  if(!P.song || !hasData(P.song)){ toast('この曲にはまだ楽譜データがありません。「入力・修正」から読み込んでください。'); return; }
+  if(!levelAvail(P.song, P.lv)){ toast('このレベルに必要なデータ（左手かコード）がありません。'); return; }
+  audio(); pSettingsFromUI(); prepare();
+  if(!P.steps.length){ toast('選んだ小節にこのレベルの音がありません。'); return; }
+  P.running=true; P.sessionStart=Date.now(); DB.lastSong=P.song.id; save();
+  $('pStart').textContent='■ やめる'; $('pStart').classList.remove('pri');
+  if($('oRec').checked) recStart(P.song.title+'（'+LEVELS[P.lv-1].name+'）', P.song.id);
+  if(P.mode==='wait') waitBegin(); else tempoBegin(true);
+}
+function stopPractice(silent){
+  if(!P.running) return;
+  P.running=false; clearTimers(); allLightsOff();
+  $('pStart').textContent='▶ はじめる'; $('pStart').classList.add('pri');
+  const sec = Math.round((Date.now()-P.sessionStart)/1000);
+  if(sec>=10){ DB.sessions.push({d:today(), ts:Date.now(), song:P.song.id, lv:P.lv, mode:P.mode, sec, acc:P.lastAcc??null}); save(); }
+  if(REC.on && REC.fromPractice) recStop();
+  P.lastAcc=null; renderToday();
+  if(!silent) $('hInfo').textContent='';
+}
+function flash(text, ms=1400){ const f=$('flash'); f.innerHTML=text; f.style.display='block'; clearTimeout(P.flashTimer); P.flashTimer=setTimeout(()=>f.style.display='none', ms); }
+
+/* ---- 待ちモード ---- */
+function waitBegin(){
+  P.viewBeat = P.steps[0].t; P.curBeat=P.steps[0].t;
+  // ループ開始から最初の音までの伴奏
+  const [a]=loopRange(); scheduleAccWindow(a, P.steps[0].t, performance.now()+60);
+  lightStep();
+  updateHud();
+}
+function lightStep(){
+  if(!$('oLight').checked) return;
+  const st=P.steps[P.idx]; if(!st) return; st.notes.forEach(n=>lightOn(n.p, n.h));
+}
+function unlightStep(st){ st.notes.forEach(n=>lightOff(n.p, n.h)); }
+function scheduleAccWindow(t0, t1, baseMs){
+  P.acc.filter(n=>n.t>=t0-1e-6 && n.t<t1-1e-6).forEach(n=>{
+    const at = baseMs + (n.t-t0)*P.msPerBeat; playAcc(n.p, at, n.d*P.msPerBeat);
+  });
+  if($('oMet').checked){ const beat = (P.song.den===8 && P.song.num%3===0)?1.5:1;
+    for(let b=Math.ceil((t0-1e-6)/beat)*beat; b<t1-1e-6; b+=beat){ const bar=barOf(P.song,b); click(baseMs+(b-t0)*P.msPerBeat, Math.abs(b-barStart(P.song,bar))<1e-3); } }
+}
+function waitNote(p){
+  const st = P.steps[P.idx]; if(!st) return;
+  if(st.notes.some(n=>n.p===p)){ st.got.add(p);
+    if(st.notes.every(n=>st.got.has(n.p))){
+      unlightStep(st); st.notes.forEach(n=>n.st=1);
+      if(!st.bad) P.hits++;
+      const next = P.steps[P.idx+1]; const [,b]=loopRange();
+      scheduleAccWindow(st.t, next?next.t:b, performance.now());
+      P.idx++; P.curBeat = next ? next.t : b;
+      if(!next){ passDone(); return; }
+      lightStep();
+    }
+  } else { st.bad=true; P.wrong++; addMiss(st.t); }
+  updateHud();
+}
+
+/* ---- テンポモード ---- */
+function tempoBegin(countIn){
+  prepare();
+  const now = performance.now(); const [a,b]=loopRange();
+  const beatUnit = (P.song.den===8 && P.song.num%3===0)?1.5:1;
+  const ci = countIn ? barLenOf(P.song.num,P.song.den) : 0;
+  P.startMs = now + 200 + ci*P.msPerBeat;
+  const ev=[];
+  if(countIn) for(let x=0;x<ci-1e-6;x+=beatUnit) ev.push({ms:now+200+x*P.msPerBeat, k:'click', acc:x===0});
+  const toMs = t => P.startMs + (t-a)*P.msPerBeat;
+  P.acc.forEach(n=>ev.push({ms:toMs(n.t), k:'acc', n}));
+  if($('oLight').checked){ const lead=+S().lead*P.msPerBeat;
+    P.play.forEach(n=>{ ev.push({ms:toMs(n.t)-lead, k:'lon', n}); ev.push({ms:toMs(n.t+n.d)-20, k:'loff', n}); }); }
+  if($('oMet').checked) for(let t=Math.ceil(a/beatUnit)*beatUnit; t<b-1e-6; t+=beatUnit){ const bar=barOf(P.song,t); ev.push({ms:toMs(t), k:'click', acc:Math.abs(t-barStart(P.song,bar))<1e-3}); }
+  ev.sort((x,y)=>x.ms-y.ms); P.events=ev; P.schedIdx=0;
+  P.endMs = toMs(b);
+  P.play.forEach(n=>n.ms=toMs(n.t));
+  if(P.tick) clearInterval(P.tick);
+  P.tick = setInterval(tempoTick, 25);
+}
+function tempoTick(){
+  const now=performance.now(); const ev=P.events;
+  while(P.schedIdx<ev.length && ev[P.schedIdx].ms < now+150){
+    const e=ev[P.schedIdx++]; const at=Math.max(e.ms, now);
+    if(e.k==='click') click(at, e.acc);
+    else if(e.k==='acc') playAcc(e.n.p, at, e.n.d*P.msPerBeat);
+    else if(e.k==='lon') lightOn(e.n.p, e.n.h, at);
+    else if(e.k==='loff') lightOff(e.n.p, e.n.h, at);
+  }
+  const win = +S().win;
+  P.play.forEach(n=>{ if(n.st===0 && now > n.ms+win){ n.st=2; addMiss(n.t); } });
+  const [a]=loopRange(); P.curBeat = a + (now-P.startMs)/P.msPerBeat;
+  if(now >= P.endMs + win){ passDone(); }
+}
+function tempoNote(p){
+  const now=performance.now(), win=+S().win;
+  let best=null; for(const n of P.play){ if(n.st===0 && n.p===p && Math.abs(now-n.ms)<=win){ if(!best || Math.abs(now-n.ms)<Math.abs(now-best.ms)) best=n; } }
+  if(best){ best.st=1; P.hits++; } else { P.wrong++; }
+  updateHud();
+}
+
+/* ---- 1周終わったら ---- */
+function passDone(){
+  const acc = P.total ? Math.max(0, (P.hits - (P.mode==='tempo'? P.wrong*0.5:0)) / P.total) : 0;
+  P.lastAcc = acc; const pct = Math.round(acc*100);
+  recordProgress(P.song.id, P.lv, P.mode, P.speed, acc);
+  let msg = `${pct}%`; let sub = acc>=0.9 ? 'よくできました！' : acc>=0.7 ? 'もう少し！' : 'ゆっくりでOK';
+  if(P.drill && acc>=0.9){ DB.learned[P.drill]=true; save(); sub=`和音「${P.drill}」を覚えました！`; }
+  if($('oAuto').checked && acc>=0.9 && P.speed<1){ P.speed=Math.min(1, Math.round((P.speed+0.05)*100)/100); $('pSpeed').value=Math.round(P.speed*100); $('pSpeedV').textContent=Math.round(P.speed*100)+'%'; sub+=`<br><small>速さを ${Math.round(P.speed*100)}% に上げます</small>`; }
+  if(P.mode==='wait' && acc>=0.95 && P.speed>=0.6 && !P.drill) sub += '<br><small>テンポモードにも挑戦してみましょう</small>';
+  flash(`${msg}<br><small>${sub}</small>`, 2200);
+  allLightsOff();
+  if(P.mode==='wait'){ prepare(); const t=setTimeout(()=>{ if(P.running) waitBegin(); }, 1600); P.timers.push(t); }
+  else { if(P.tick) clearInterval(P.tick); P.tick=null; const t=setTimeout(()=>{ if(P.running) tempoBegin(true); }, 1800); P.timers.push(t); }
+  updateHud();
+}
+function recordProgress(id, lv, mode, speed, acc){
+  DB.prog[id] = DB.prog[id]||{}; const k = lv+'';
+  const g = DB.prog[id][k] = DB.prog[id][k] || {wait:0, tempo:0, tempoSpeed:0, cleared:false};
+  if(mode==='wait') g.wait = Math.max(g.wait, acc);
+  else { if(acc>=0.9) g.tempoSpeed = Math.max(g.tempoSpeed, speed); g.tempo=Math.max(g.tempo, acc); if(acc>=0.9 && speed>=1) g.cleared=true; }
+  save();
+}
+function addMiss(t){
+  if(P.drill) return; const bar=barOf(P.song,t);
+  const m = DB.barMiss[P.song.id] = DB.barMiss[P.song.id]||{}; const l = m[P.lv] = m[P.lv]||{}; l[bar]=(l[bar]||0)+1; save();
+}
+P.onNote = p => { if(!P.running) return; if(P.mode==='wait') waitNote(p); else tempoNote(p); };
+
+/* =========================================================
+   練習画面の描画（流れてくる音符 + 鍵盤）
+   ========================================================= */
+const cv=$('cv'), cx=cv.getContext('2d'); let kbGeom=null;
+function viewRange(){
+  const s=P.song; let lo=60, hi=72;
+  if(s){ const parts=levelParts(s,P.lv); const ns=[...parts.play, ...parts.acc]; if(ns.length){ lo=Math.min(...ns.map(n=>n.p)); hi=Math.max(...ns.map(n=>n.p)); } }
+  lo = Math.floor(lo/12)*12; hi = Math.ceil((hi+1)/12)*12-1;
+  while(hi-lo < 35){ if(lo>36) lo-=12; else hi+=12; }
+  return [Math.max(21,lo), Math.min(108,hi)];
+}
+function draw(){
+  requestAnimationFrame(draw);
+  if(curTab!=='practice') return;
+  const dpr=window.devicePixelRatio||1, W=cv.clientWidth, H=cv.clientHeight;
+  if(cv.width!==Math.round(W*dpr)||cv.height!==Math.round(H*dpr)){ cv.width=Math.round(W*dpr); cv.height=Math.round(H*dpr); }
+  cx.setTransform(dpr,0,0,dpr,0,0); cx.clearRect(0,0,W,H);
+  const s=P.song; if(!s) return;
+  const [lo,hi] = viewRange(); let whites=0; for(let p=lo;p<=hi;p++) if(!isBlack(p)) whites++;
+  const kh = Math.min(120, H*0.28), kt = H-kh, ww = W/whites;
+  const xs={}; let wi=0; for(let p=lo;p<=hi;p++){ if(isBlack(p)) xs[p]={x:wi*ww-ww*0.32, w:ww*0.64, b:true}; else { xs[p]={x:wi*ww, w:ww, b:false}; wi++; } }
+  kbGeom={lo,hi,kt,kh,xs,ww};
+  // 表示位置
+  if(!P.running){ P.curBeat = barStart(s, +$('pFrom').value||0); }
+  P.viewBeat += (P.curBeat - P.viewBeat) * (P.mode==='wait'?0.18:1);
+  const vb = P.viewBeat; const span = Math.max(4, barLenOf(s.num,s.den)*1.6); const ppb = kt/span;
+  const yOf = t => kt - (t - vb)*ppb;
+  // 小節線
+  cx.strokeStyle='rgba(255,255,255,.12)'; cx.fillStyle='rgba(255,255,255,.35)'; cx.font='11px sans-serif';
+  s.barStarts.forEach((t,i)=>{ const y=yOf(t); if(y<-10||y>kt) return; cx.beginPath(); cx.moveTo(0,y); cx.lineTo(W,y); cx.stroke(); cx.fillText((i+1)+'', 4, y-3); });
+  // 鍵盤の縦ガイド（Cの位置）
+  cx.fillStyle='rgba(255,255,255,.04)'; for(let p=lo;p<=hi;p++) if(p%12===0) cx.fillRect(xs[p].x,0,1,kt);
+  // 音符
+  const parts = P.running ? {play:P.play, acc:P.acc} : (()=>{ const lp=levelParts(s,P.lv); return {play:lp.play, acc:$('oAcc').checked?lp.acc:[]}; })();
+  const drawN = (n, kind) => {
+    const g=xs[n.p]; if(!g) return; const y1=yOf(n.t+n.d), y0=yOf(n.t); if(y0<0||y1>kt) return;
+    let col = kind==='acc' ? 'rgba(255,255,255,.13)' : (n.h==='L'?'#3d84b8':'#e8743b');
+    if(kind!=='acc' && n.st===1) col='#3aa76d'; if(kind!=='acc' && n.st===2) col='#8a4a44';
+    const x=g.x+1, w=g.w-2, h=Math.max(6, y0-y1-2);
+    cx.fillStyle=col; roundRect(x, y0-h, w, h, 5); cx.fill();
+    if(kind!=='acc' && w>14 && h>14){ cx.fillStyle='#fff'; cx.font=`bold ${Math.min(13,w*0.55)}px sans-serif`; cx.textAlign='center';
+      const lab = pname(n.p); if(lab) cx.fillText(lab, x+w/2, y0-5); if(n.f) cx.fillText(n.f, x+w/2, y0-h+14); cx.textAlign='left'; }
+  };
+  parts.acc.forEach(n=>drawN(n,'acc')); parts.play.forEach(n=>drawN(n,'play'));
+  // 判定ライン
+  cx.fillStyle='rgba(255,209,102,.8)'; cx.fillRect(0,kt-2,W,2);
+  // 鍵盤
+  const target = new Set();
+  if(P.running && P.mode==='wait'){ const st=P.steps[P.idx]; if(st) st.notes.forEach(n=>{ if(!st.got.has(n.p)) target.add(n.p); }); }
+  else parts.play.forEach(n=>{ if(n.t<=vb+0.02 && n.t+n.d>vb) target.add(n.p); });
+  const drawKey = (p) => { const g=xs[p]; const h = g.b? kh*0.62 : kh;
+    cx.fillStyle = held.has(p) ? '#e8743b' : target.has(p) ? '#ffd166' : (g.b?'#222':'#fafafa');
+    roundRect(g.x+0.5, kt, g.w-1, h, 4); cx.fill(); cx.strokeStyle='#444'; cx.stroke();
+    if(!g.b && p%12===0){ cx.fillStyle='#999'; cx.font='10px sans-serif'; cx.textAlign='center'; cx.fillText('C'+oct(p), g.x+g.w/2, kt+kh-5); cx.textAlign='left'; } };
+  for(let p=lo;p<=hi;p++) if(!isBlack(p)) drawKey(p);
+  for(let p=lo;p<=hi;p++) if(isBlack(p)) drawKey(p);
+  // HUD
+  const c = chordAt(s, Math.max(vb,0)); $('hChord').textContent = c ? c.name : '';
+  $('hBar').textContent = `${barOf(s, Math.max(0,vb))+1} / ${s.barStarts.length}小節`;
+}
+function roundRect(x,y,w,h,r){ cx.beginPath(); cx.moveTo(x+r,y); cx.arcTo(x+w,y,x+w,y+h,r); cx.arcTo(x+w,y+h,x,y+h,r); cx.arcTo(x,y+h,x,y,r); cx.arcTo(x,y,x+w,y,r); cx.closePath(); }
+function updateHud(){
+  if(!P.running){ $('hInfo').textContent=''; return; }
+  const done = P.mode==='wait' ? P.idx : P.play.filter(n=>n.st).length;
+  $('hInfo').textContent = `速さ ${Math.round(P.speed*100)}% ・ 正解 ${P.hits}/${P.total} ・ ミス ${P.wrong}` + (P.mode==='wait'?` ・ ${done}/${P.steps.length}`:'');
+}
+// キャンバス上の鍵盤をタップ
+const cvPtr = new Map();
+cv.addEventListener('pointerdown', e=>{
+  if(!kbGeom) return; const r=cv.getBoundingClientRect(); const x=e.clientX-r.left, y=e.clientY-r.top; if(y<kbGeom.kt) return;
+  let hit=null; const {xs,kt,kh}=kbGeom;
+  for(const p in xs){ const g=xs[p]; if(g.b && x>=g.x && x<=g.x+g.w && y<=kt+kh*0.62){ hit=+p; break; } }
+  if(hit==null) for(const p in xs){ const g=xs[p]; if(!g.b && x>=g.x && x<=g.x+g.w){ hit=+p; break; } }
+  if(hit!=null){ cvPtr.set(e.pointerId, hit); noteOn(hit, 90, 'screen'); }
+});
+['pointerup','pointercancel','pointerleave'].forEach(t=>cv.addEventListener(t, e=>{ const p=cvPtr.get(e.pointerId); if(p!=null){ cvPtr.delete(e.pointerId); noteOff(p,'screen'); } }));
+
+/* =========================================================
+   練習タブ UI
+   ========================================================= */
+function songOptions(sel, onlyData){
+  const cur = sel.value;
+  const drills = DB.songs.filter(s=>s.temp);
+  sel.innerHTML = (drills.length?'<optgroup label="和音ドリル">'+drills.map(s=>`<option value="${s.id}">${esc(s.title)}</option>`).join('')+'</optgroup>':'') + [1,2,3,4,5].map(st=>`<optgroup label="段階${st}">`+DB.songs.filter(s=>s.stage==st && !s.temp && (!onlyData||hasData(s))).map(s=>`<option value="${s.id}">${esc(s.title)}${hasData(s)?'':'（データなし）'}</option>`).join('')+'</optgroup>').join('');
+  if(cur && getSong(cur)) sel.value=cur;
+}
+function refreshPracticeUI(){
+  const s = getSong($('pSong').value); P.song=s; if(!s) return;
+  $('pLevel').innerHTML = LEVELS.map(l=>`<button data-l="${l.n}" class="${l.n===P.lv?'on':''}" ${levelAvail(s,l.n)?'':'disabled'}>${l.name}</button>`).join('');
+  if(!levelAvail(s,P.lv)){ const f=LEVELS.find(l=>levelAvail(s,l.n)); if(f){ P.lv=f.n; refreshPracticeUI(); return; } }
+  const opts = s.barStarts.map((_,i)=>`<option value="${i}">${i+1}</option>`).join('');
+  const f=+$('pFrom').value||0, t=$('pTo').value;
+  $('pFrom').innerHTML=opts; $('pTo').innerHTML=opts;
+  $('pFrom').value = Math.min(f, s.barStarts.length-1); $('pTo').value = (t!=='' && t!=null && +t<s.barStarts.length && P._songId===s.id) ? t : s.barStarts.length-1;
+  P._songId = s.id;
+}
+$('pSong').addEventListener('change', ()=>{ stopPractice(); P.drill=null; $('pFrom').value=0; P._songId=null; refreshPracticeUI(); });
+$('pLevel').addEventListener('click', e=>{ const b=e.target.closest('button'); if(!b||b.disabled) return; stopPractice(); P.lv=+b.dataset.l; refreshPracticeUI(); });
+$('pMode').addEventListener('click', e=>{ const b=e.target.closest('button'); if(!b) return; stopPractice(); P.mode=b.dataset.m; [...$('pMode').children].forEach(x=>x.classList.toggle('on',x===b)); });
+$('pSpeed').addEventListener('input', ()=>{ $('pSpeedV').textContent=$('pSpeed').value+'%'; if(P.running){ P.speed=+$('pSpeed').value/100; P.msPerBeat=60000/(P.song.bpm*P.speed); } });
+['pFrom','pTo'].forEach(id=>$(id).addEventListener('change', ()=>{ stopPractice(); if(+$('pTo').value<+$('pFrom').value) $('pTo').value=$('pFrom').value; }));
+$('pAll').addEventListener('click', ()=>{ stopPractice(); $('pFrom').value=0; $('pTo').value=P.song.barStarts.length-1; });
+$('pStart').addEventListener('click', ()=>{ if(P.running) stopPractice(); else startPractice(); });
+function goPractice(id, lv, mode, from, to, opt={}){
+  stopPractice(); switchTab('practice'); songOptions($('pSong')); $('pSong').value=id; P.lv=lv||1; P._songId=null; P.drill=opt.drill||null;
+  refreshPracticeUI();
+  if(mode){ P.mode=mode; [...$('pMode').children].forEach(x=>x.classList.toggle('on',x.dataset.m===mode)); }
+  if(from!=null){ $('pFrom').value=from; $('pTo').value=to!=null?to:from; }
+  if(opt.speed){ $('pSpeed').value=opt.speed; $('pSpeedV').textContent=opt.speed+'%'; }
+}
+
+/* =========================================================
+   和音ドリル（一時的な曲を作って練習）
+   ========================================================= */
+function drillSong(key){
+  const id='drill-'+key; let s=getSong(id); if(s) DB.songs.splice(DB.songs.indexOf(s),1);
+  const base = key==='C' ? 'G' : 'C';
+  s = {id, title:'和音ドリル：'+key, artist:'', stage:0, bpm:70, num:4, den:4, notes:[], chords:[], issues:[], temp:true};
+  const seq=[key,base,key,base,key,key]; seq.forEach((c,i)=>s.chords.push({t:i*4, name:c}));
+  ensureBars(s); s.barStarts = regularBars(s, 24); DB.songs.push(s); return s;
+}
+
+/* =========================================================
+   今日のメニュー
+   ========================================================= */
+function streak(){
+  const days = new Set(DB.sessions.map(x=>x.d)); let n=0; const d=new Date();
+  if(!days.has(today(d))) d.setDate(d.getDate()-1);
+  while(days.has(today(d))){ n++; d.setDate(d.getDate()-1); } return n;
+}
+function nextChord(){ return CURRIC.find(c=>!DB.learned[c]); }
+function suggestLevel(s){
+  for(const l of LEVELS){ if(!levelAvail(s,l.n)) continue; const g=(DB.prog[s.id]||{})[l.n]; if(!g || !g.cleared) return {lv:l.n, mode: (g && g.wait>=0.95) ? 'tempo':'wait', speed: g&&g.tempoSpeed? Math.round(Math.min(1,g.tempoSpeed+0.05)*100) : 60}; }
+  return {lv:5, mode:'tempo', speed:100};
+}
+function weakBars(s, lv){ const m=((DB.barMiss[s.id]||{})[lv])||{}; return Object.entries(m).sort((a,b)=>b[1]-a[1]).map(x=>+x[0]); }
+function renderToday(){
+  $('streak').textContent = streak()+'日';
+  const wk = Date.now()-7*864e5; $('week').textContent = Math.round(DB.sessions.filter(x=>x.ts>=wk).reduce((a,b)=>a+b.sec,0)/60)+'分';
+  const items=[];
+  const nc = nextChord();
+  if(nc) items.push({t:`ウォームアップ：和音「${nc}」のドリル`, s:'2分・待ちモード。押さえる鍵盤が光ります', go:()=>{ const d=drillSong(nc); goPractice(d.id,3,'wait',0,5,{drill:nc, speed:60}); }});
+  let s = getSong(DB.lastSong); if(!s || !hasData(s) || s.temp) s = DB.songs.filter(x=>hasData(x)&&!x.temp).sort((a,b)=>a.stage-b.stage).find(x=>!((DB.prog[x.id]||{})[5]||{}).cleared) || DB.songs.find(x=>hasData(x));
+  if(s){
+    const sg = suggestLevel(s); const wb = weakBars(s, sg.lv);
+    if(wb.length){ const b=wb[0]; const to=Math.min(b+1, s.barStarts.length-1);
+      items.push({t:`苦手な小節：「${s.title}」${b+1}〜${to+1}小節`, s:`${LEVELS[sg.lv-1].name}・ゆっくりくり返し`, go:()=>goPractice(s.id, sg.lv, 'wait', b, to, {speed:50})}); }
+    items.push({t:`練習中の曲：「${s.title}」`, s:`${LEVELS[sg.lv-1].name}・${sg.mode==='wait'?'待ちモード':'テンポモード '+sg.speed+'%'}`, go:()=>goPractice(s.id, sg.lv, sg.mode, 0, s.barStarts.length-1, {speed:sg.speed})});
+  }
+  const old = DB.recs.filter(r=>r.ts < Date.now()-6*864e5).slice(-1)[0], nw = DB.recs.slice(-1)[0];
+  if(old && nw && old!==nw) items.push({t:'聴き比べ：1週間前と最近の録音', s:esc(old.title), go:()=>{ switchTab('log'); playCompare([old,nw]); }});
+  else items.push({t:'仕上げ：通して1回録音してみる', s:'あとで聴き比べると上達がわかります', go:()=>{ if(s){ goPractice(s.id, suggestLevel(s).lv, 'tempo', 0, s.barStarts.length-1, {speed:suggestLevel(s).speed}); $('oRec').checked=true; } }});
+  const doneT = new Set(DB.sessions.filter(x=>x.d===today()).map(x=>x.song));
+  $('menu').innerHTML = items.map((it,i)=>`<div class="menu-item"><div class="num">${i+1}</div><div class="grow"><b>${esc(it.t)}</b><div class="muted">${it.s}</div></div><button class="b pri" data-i="${i}">始める</button></div>`).join('')
+    + (doneT.size? `<p class="muted">今日は ${doneT.size} 曲練習しました。</p>`:'');
+  [...$('menu').querySelectorAll('button')].forEach(b=>b.onclick=()=>items[+b.dataset.i].go());
+}
+
+/* =========================================================
+   曲一覧
+   ========================================================= */
+const STAGES = ['','段階1　右手のメロディ','段階2　3つの和音','段階3　短調の和音','段階4　分散和音','段階5　ピアノが主役'];
+function progBadges(s){
+  const g = DB.prog[s.id]||{}; return LEVELS.filter(l=>levelAvail(s,l.n)).map(l=>{ const x=g[l.n]; if(!x) return `<span class="pill">Lv${l.n}</span>`;
+    if(x.cleared) return `<span class="pill ok">Lv${l.n} ✓</span>`; if(x.tempoSpeed) return `<span class="pill warn">Lv${l.n} ${Math.round(x.tempoSpeed*100)}%</span>`; return `<span class="pill warn">Lv${l.n} 待ち${Math.round(x.wait*100)}%</span>`; }).join('');
+}
+function renderSongs(){
+  const html = [1,2,3,4,5].map(st=>{
+    const ss = DB.songs.filter(s=>s.stage==st && !s.temp); if(!ss.length) return '';
+    return `<div class="card stage"><h3>${STAGES[st]}</h3><div class="grid">`+ss.map(s=>{
+      const keys=songChordKeys(s); const miss=keys.filter(k=>!DB.learned[k]);
+      return `<div class="song ${s.target?'target':''}"><div class="t">${s.target?'🎯 ':''}${esc(s.title)}</div><div class="muted">${esc(s.artist)}</div>
+      <div>${hasData(s)? `<span class="pill">${s.barStarts.length}小節</span>`+(s.issues.length?`<span class="pill ng">要確認 ${s.issues.length}</span>`:'') : '<span class="pill">データなし</span>'}
+      ${keys.length? `<span class="pill ${miss.length?'':'ok'}">和音 ${keys.length-miss.length}/${keys.length}</span>`:''}</div>
+      <div>${hasData(s)?progBadges(s):''}</div>
+      <div class="row" style="margin-top:6px">
+        ${hasData(s)?`<button class="b sm pri" data-a="play" data-id="${s.id}">練習</button>`:''}
+        <button class="b sm" data-a="imp" data-id="${s.id}">${hasData(s)?'読み込み直す':'楽譜を読み込む'}</button>
+        <button class="b sm" data-a="edit" data-id="${s.id}">修正</button>
+        ${s.builtin?'':`<button class="b sm" data-a="del" data-id="${s.id}">削除</button>`}
+      </div></div>`; }).join('')+'</div></div>';
+  }).join('');
+  $('songList').innerHTML = html;
+}
+$('songList').addEventListener('click', async e=>{
+  const b=e.target.closest('button'); if(!b) return; const id=b.dataset.id, s=getSong(id);
+  if(b.dataset.a==='play'){ const sg=suggestLevel(s); goPractice(id, sg.lv, sg.mode, 0, s.barStarts.length-1, {speed:sg.speed}); }
+  if(b.dataset.a==='imp') startImport(id);
+  if(b.dataset.a==='edit') openEditor(id);
+  if(b.dataset.a==='del'){ if(await confirmBox(`「${s.title}」を削除しますか？`)){ DB.songs.splice(DB.songs.indexOf(s),1); save(); renderSongs(); } }
+});
+$('impNew').onclick = ()=>startImport(null);
+$('newSong').onclick = ()=>{ const s={id:uid(), title:'新しい曲', artist:'', stage:1, target:false, bpm:100, num:4, den:4, notes:[], chords:[], barStarts:[0,4,8,12], issues:[]}; DB.songs.push(s); save(); openEditor(s.id); };
+
+/* =========================================================
+   入力・修正
+   ========================================================= */
+const ED = {song:null, bar:0, hand:'R', dur:1, cursor:0, pend:new Set(), hist:[], fix:null};
+let eKb;
+function openEditor(id){ switchTab('edit'); songOptions($('eSong')); $('eSong').value=id; loadEditor(); }
+function loadEditor(){
+  const s = getSong($('eSong').value); ED.song=s; if(!s) return; ED.bar=Math.min(ED.bar, s.barStarts.length-1); ED.fix=null;
+  $('eTitle').value=s.title; $('eArtist').value=s.artist||''; $('eStage').value=s.stage||1; $('eTarget').checked=!!s.target;
+  $('eBpm').value=s.bpm; $('eNum').value=s.num; $('eDen').value=s.den;
+  $('cText').value = chordText(s); $('cMsg').textContent='';
+  if(ED._sid!==s.id){ ED.bar=0; ED.cursor=0; ED.hist=[]; ED._sid=s.id; }
+  renderBar();
+}
+function renderBar(){
+  const s=ED.song; if(!s) return;
+  $('eIssues').innerHTML = s.issues.length ? '拍数が合わない小節： '+s.issues.map(i=>`<button class="b sm" data-bar="${i}" style="color:var(--ng)">${i+1}</button>`).join(' ') + '<br>読み取りミスの可能性があります。楽譜と見比べて直してください。' : (hasData(s)?'気になる小節はありません。':'まだ音がありません。下の「鍵盤で入力」か、楽譜ファイルの読み込みで入れてください。');
+  [...$('eIssues').querySelectorAll('button')].forEach(b=>b.onclick=()=>{ ED.bar=+b.dataset.bar; renderBar(); });
+  $('eBarLbl').textContent = `${ED.bar+1}小節目 / ${s.barStarts.length}`;
+  const a=barStart(s,ED.bar), b=barEnd(s,ED.bar);
+  const ns = s.notes.map((n,i)=>({...n,i})).filter(n=>n.t>=a-1e-6 && n.t<b-1e-6);
+  const groups = groupOnsets(ns);
+  const ch = s.chords.filter(c=>c.t>=a-1e-6 && c.t<b-1e-6).map(c=>c.name).join(' ');
+  const durName = d => ({4:'全',3:'付点2分',2:'2分',1.5:'付点4分',1:'4分',0.75:'付点8分',0.5:'8分',0.25:'16分'}[d] || (+d.toFixed(2))+'拍');
+  $('eBar').innerHTML = (ch?`<div class="on-row"><span class="beat">コード</span><b>${esc(ch)}</b></div>`:'') + (groups.length ? groups.map(g=>`<div class="on-row"><span class="beat">${(+(g.t-a+1).toFixed(2))}拍目</span>`+
+    g.notes.map(n=>`<span class="nchip ${n.h} ${ED.fix===n.i?'sel':''}">${n.h==='R'?'右':'左'} ${pfull(n.p)} ${durName(n.d)}<button data-fix="${n.i}">直す</button><button data-del="${n.i}">×</button></span>`).join(' ')
+    + `<button class="b sm" data-cur="${g.t}">ここから入力</button></div>`).join('') : '<div class="on-row muted">この小節に音はありません</div>');
+  [...$('eBar').querySelectorAll('[data-fix]')].forEach(x=>x.onclick=()=>{ ED.fix = ED.fix===+x.dataset.fix?null:+x.dataset.fix; renderBar(); if(ED.fix!=null) toast('LK-530で正しい鍵盤を押してください'); });
+  [...$('eBar').querySelectorAll('[data-del]')].forEach(x=>x.onclick=()=>{ pushHist(); s.notes.splice(+x.dataset.del,1); save(); renderBar(); });
+  [...$('eBar').querySelectorAll('[data-cur]')].forEach(x=>x.onclick=()=>{ ED.cursor=+x.dataset.cur; $('sArm').checked=true; renderCursor(); });
+  if(eKb){ eKb.setMarks(ns.map(n=>n.p)); }
+  renderCursor();
+}
+function renderCursor(){ const s=ED.song; if(!s) return; const b=barOf(s,ED.cursor); $('sCur').textContent = `入力位置：${b+1}小節目 ${(+(ED.cursor-barStart(s,b)+1).toFixed(2))}拍目（${ED.hand==='R'?'右手':'左手'}）`; }
+function pushHist(){ ED.hist.push(JSON.stringify({n:ED.song.notes, c:ED.cursor})); if(ED.hist.length>50) ED.hist.shift(); }
+function curDur(){ let d=ED.dur; if($('sDot').checked) d*=1.5; if($('sTri').checked) d*=2/3; return r48(d); }
+ED.onNote = p => {
+  const s=ED.song; if(!s) return;
+  if(ED.fix!=null){ pushHist(); s.notes[ED.fix].p = p; ED.fix=null; sortSong(s); save(); renderBar(); toast(pfull(p)+' に直しました'); return; }
+  if($('sArm').checked) ED.pend.add(p);
+};
+ED.onOff = p => {
+  if(!$('sArm').checked || !ED.pend.size || [...ED.pend].some(q=>held.has(q))) return;
+  const s=ED.song; pushHist(); const d=curDur();
+  [...ED.pend].forEach(q=>s.notes.push({t:r48(ED.cursor), d, p:q, h:ED.hand}));
+  ED.pend.clear(); ED.cursor = r48(ED.cursor + d); ensureBars(s); sortSong(s); save();
+  ED.bar = barOf(s, Math.max(0,ED.cursor-1e-3)); if(ED.cursor >= barEnd(s,ED.bar)-1e-6 && ED.bar < s.barStarts.length-1){} renderBar();
+};
+$('eSong').addEventListener('change', loadEditor);
+$('eImp').onclick = ()=>startImport($('eSong').value);
+$('eSave').onclick = ()=>{ const s=ED.song; s.title=$('eTitle').value||'無題'; s.artist=$('eArtist').value; s.stage=+$('eStage').value; s.target=$('eTarget').checked;
+  s.bpm=Math.max(30,+$('eBpm').value||100); const nn=Math.max(1,+$('eNum').value||4), dd=+$('eDen').value;
+  if(nn!==s.num || dd!==s.den){ s.num=nn; s.den=dd; if(!s.issues.length){ const e=songEnd(s); s.barStarts=[]; ensureBars(s); s.barStarts=regularBars(s, e); } }
+  save(); songOptions($('eSong')); $('eSong').value=s.id; toast('保存しました'); };
+$('ePrev').onclick=()=>{ ED.bar=Math.max(0,ED.bar-1); ED.fix=null; renderBar(); };
+$('eNext').onclick=()=>{ const s=ED.song; if(ED.bar>=s.barStarts.length-1){ s.barStarts.push(r48(barEnd(s,ED.bar))); save(); } ED.bar++; ED.fix=null; renderBar(); };
+$('eOk').onclick=()=>{ const s=ED.song; s.issues=s.issues.filter(i=>i!==ED.bar); save(); renderBar(); };
+$('ePlay').onclick=()=>{ const s=ED.song; const a=barStart(s,ED.bar), b=barEnd(s,ED.bar); const mpb=60000/s.bpm; const now=performance.now()+100;
+  s.notes.filter(n=>n.t>=a-1e-6&&n.t<b-1e-6).forEach(n=>{ synth(n.p, now+(n.t-a)*mpb, n.d*mpb); if(MIDI.out){ lightOn(n.p,n.h, now+(n.t-a)*mpb); lightOff(n.p,n.h, now+(n.t+n.d-a)*mpb); } });
+  chordSpans(s).filter(x=>x.t>=a-1e-6&&x.t<b-1e-6).forEach(x=>voicing(x.p).forEach(p=>synth(p, now+(x.t-a)*mpb, Math.min(x.d,b-x.t)*mpb, 45))); };
+$('sHand').addEventListener('click', e=>{ const b=e.target.closest('button'); if(!b) return; ED.hand=b.dataset.h; [...$('sHand').children].forEach(x=>x.classList.toggle('on',x===b)); renderCursor(); });
+$('sDur').addEventListener('click', e=>{ const b=e.target.closest('button'); if(!b) return; ED.dur=+b.dataset.d; [...$('sDur').children].forEach(x=>x.classList.toggle('on',x===b)); });
+$('sRest').onclick=()=>{ pushHist(); ED.cursor=r48(ED.cursor+curDur()); ensureBars(ED.song); renderCursor(); };
+$('sUndo').onclick=()=>{ const h=ED.hist.pop(); if(!h) return; const o=JSON.parse(h); ED.song.notes=o.n; ED.cursor=o.c; save(); renderBar(); };
+$('sBarStart').onclick=()=>{ ED.cursor=barStart(ED.song,ED.bar); $('sArm').checked=true; renderCursor(); };
+$('sClear').onclick=async()=>{ const s=ED.song; if(!await confirmBox(`${ED.bar+1}小節目の${ED.hand==='R'?'右手':'左手'}の音を消して、入れ直しますか？`)) return;
+  pushHist(); const a=barStart(s,ED.bar), b=barEnd(s,ED.bar); s.notes=s.notes.filter(n=>!(n.h===ED.hand && n.t>=a-1e-6 && n.t<b-1e-6)); ED.cursor=a; $('sArm').checked=true; save(); renderBar(); };
+$('cApply').onclick=()=>{ const s=ED.song; const bad=applyChordText(s, $('cText').value); ensureBars(s); save(); renderBar();
+  $('cMsg').innerHTML = bad.length ? `<span style="color:var(--ng)">読めないコード：${esc(bad.join(', '))}</span>` : `${s.chords.length}個のコードを反映しました`; };
+
+/* =========================================================
+   和音マップ
+   ========================================================= */
+const CM = {sel:null, kb:null};
+function renderChords(){
+  const nc = nextChord();
+  const extra = [...new Set(DB.songs.filter(s=>!s.temp).flatMap(songChordKeys))].filter(k=>!CURRIC.includes(k));
+  const all = [...CURRIC, ...extra];
+  $('chordGrid').innerHTML = all.map(k=>`<div class="chordbox ${DB.learned[k]?'ok':''} ${k===nc?'next':''}" data-k="${esc(k)}"><div class="n">${esc(k)}</div><div class="muted">${DB.learned[k]?'覚えた':k===nc?'次はこれ':''}</div></div>`).join('');
+  [...$('chordGrid').children].forEach(el=>el.onclick=()=>{ CM.sel=el.dataset.k; renderChordDetail(); });
+  // 解放マップ
+  $('unlock').innerHTML = [1,2,3,4,5].map(st=>{ const ss=DB.songs.filter(s=>s.stage==st&&!s.temp); if(!ss.length) return '';
+    return `<h3>${STAGES[st]}</h3>`+ss.map(s=>{ const keys=songChordKeys(s); const miss=keys.filter(k=>!DB.learned[k]);
+      const st2 = !hasData(s) ? '<span class="pill">楽譜を読み込むと必要な和音がわかります</span>' : !keys.length ? '<span class="pill">コード情報なし</span>' : miss.length ? `<span class="pill warn">あと${miss.length}個：${esc(miss.join('・'))}</span>` : '<span class="pill ok">和音はそろいました！</span>';
+      return `<div class="on-row"><b>${s.target?'🎯 ':''}${esc(s.title)}</b> ${st2}</div>`; }).join(''); }).join('');
+  if(CM.sel) renderChordDetail();
+}
+function renderChordDetail(){
+  const k=CM.sel; const c=parseChord(k); if(!c){ $('chordDetail').innerHTML=''; return; }
+  const v = voicing(c);
+  $('chordDetail').innerHTML = `<div class="card" style="margin:0"><div class="row"><span class="big">${esc(k)}</span><span class="muted grow">左手：${v.map(p=>pfull(p)).join('・')}　（指は 5・3・1 が基本）</span>
+    <button class="b sm blue" id="cmHear">🔊 聴く</button><button class="b sm" id="cmLight">💡 光らせる</button><button class="b sm pri" id="cmDrill">ドリル</button>
+    <label class="tg"><input type="checkbox" id="cmLearn" ${DB.learned[k]?'checked':''}>覚えた</label></div><div class="dkb" id="cmKb"></div><div class="muted" id="cmMsg">画面かキーボードで押さえてみてください。</div></div>`;
+  CM.kb = makeKb($('cmKb'), 48, 71); CM.kb.setMarks(v); CM.v=v;
+  $('cmHear').onclick=()=>{ const n=performance.now()+50; v.forEach(p=>synth(p,n,1200,70)); };
+  $('cmLight').onclick=()=>{ if(!MIDI.out){ toast('キーボードが接続されていません'); return; } const n=performance.now(); v.forEach(p=>{ lightOn(p,'L',n); lightOff(p,'L',n+2500); }); };
+  $('cmDrill').onclick=()=>{ const d=drillSong(k); goPractice(d.id,3,'wait',0,5,{drill:k, speed:60}); };
+  $('cmLearn').onchange=e=>{ if(e.target.checked) DB.learned[k]=true; else delete DB.learned[k]; save(); renderChords(); };
+}
+CM.onNote = () => { if(!CM.v || !$('cmMsg')) return; if(CM.v.every(p=>held.has(p))) { $('cmMsg').innerHTML='<b style="color:var(--ok)">正解！ その形です。</b>'; } };
+
+/* =========================================================
+   録音・記録
+   ========================================================= */
+const REC = {on:false, ev:[], t0:0, title:'', song:null, fromPractice:false, playT:[]};
+function recStart(title, songId){ REC.on=true; REC.ev=[]; REC.t0=performance.now(); REC.title=title; REC.song=songId; REC.fromPractice=!!songId; if(!songId){ $('freeRec').textContent='■ 録音を止める'; } toast('録音を始めました'); }
+function recStop(){
+  if(!REC.on) return; REC.on=false; $('freeRec').textContent='⏺ 自由に録音';
+  if(REC.ev.length<2){ toast('音が記録されなかったので保存しませんでした'); return; }
+  const t0 = REC.ev[0][0]; REC.ev.forEach(e=>e[0]=Math.round(e[0]-t0));
+  DB.recs.push({id:uid(), ts:Date.now(), title:REC.title, song:REC.song, ev:REC.ev});
+  if(DB.recs.length>60) DB.recs.shift();
+  save(); renderLog(); toast('録音を保存しました（記録タブ）');
+}
+function playRec(r, startMs){
+  const base = startMs || performance.now()+100; const on={};
+  r.ev.forEach(([ms,type,p,v])=>{ if(type===1) on[p]={ms,v}; else if(on[p]){ synth(p, base+on[p].ms, Math.max(80,ms-on[p].ms), on[p].v); delete on[p]; } });
+  return base + (r.ev.length? r.ev[r.ev.length-1][0] : 0);
+}
+function playCompare(rs){ audio(); let t=performance.now()+100; rs.forEach((r,i)=>{ const end=playRec(r,t); if(i===0) toast(`1つ目：${r.title}`); t=end+1500; const tt=setTimeout(()=>toast(`2つ目：${rs[1]?rs[1].title:''}`), (end-performance.now())); REC.playT.push(tt); }); }
+$('recStop').onclick=()=>{ if(AC){ AC.close(); AC=null; } REC.playT.forEach(clearTimeout); REC.playT=[]; };
+$('freeRec').onclick=()=>{ if(REC.on) recStop(); else recStart('自由録音 '+new Date().toLocaleString('ja-JP',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'}), null); };
+function renderLog(){
+  // 14日
+  const days=[]; for(let i=13;i>=0;i--){ const d=new Date(); d.setDate(d.getDate()-i); days.push(today(d)); }
+  const mins = days.map(d=>DB.sessions.filter(x=>x.d===d).reduce((a,b)=>a+b.sec,0)/60); const mx=Math.max(10,...mins);
+  $('bars14').innerHTML = days.map((d,i)=>`<div style="height:${mins[i]/mx*100}%" title="${Math.round(mins[i])}分"><span>${+d.slice(8)}</span></div>`).join('');
+  // 曲ごと
+  const rows = DB.songs.filter(s=>DB.prog[s.id] && !s.temp).map(s=>`<tr><td>${esc(s.title)}</td><td>${progBadges(s)}</td><td>${Math.round(DB.sessions.filter(x=>x.song===s.id).reduce((a,b)=>a+b.sec,0)/60)}分</td></tr>`);
+  $('progTable').innerHTML = rows.length ? `<table><tr><th>曲</th><th>レベル</th><th>時間</th></tr>${rows.join('')}</table>` : '<p class="muted">まだ記録がありません。</p>';
+  // 録音
+  $('recList').innerHTML = DB.recs.length ? DB.recs.slice().reverse().map(r=>`<div class="on-row"><input type="checkbox" class="rsel" value="${r.id}" style="width:20px;height:20px"><span class="grow">${esc(r.title)}<br><span class="muted">${new Date(r.ts).toLocaleString('ja-JP')}・${Math.round((r.ev[r.ev.length-1]||[0])[0]/1000)}秒</span></span><button class="b sm blue" data-play="${r.id}">▶</button><button class="b sm" data-del="${r.id}">削除</button></div>`).join('') : '<p class="muted">まだ録音がありません。</p>';
+  [...$('recList').querySelectorAll('[data-play]')].forEach(b=>b.onclick=()=>{ audio(); playRec(DB.recs.find(r=>r.id===b.dataset.play)); });
+  [...$('recList').querySelectorAll('[data-del]')].forEach(b=>b.onclick=async()=>{ if(await confirmBox('この録音を削除しますか？')){ DB.recs=DB.recs.filter(r=>r.id!==b.dataset.del); save(); renderLog(); } });
+  const upd=()=>{ $('cmpPlay').disabled = $('recList').querySelectorAll('.rsel:checked').length!==2; };
+  [...$('recList').querySelectorAll('.rsel')].forEach(c=>c.onchange=upd); upd();
+}
+$('cmpPlay').onclick=()=>{ const ids=[...$('recList').querySelectorAll('.rsel:checked')].map(c=>c.value); const rs=DB.recs.filter(r=>ids.includes(r.id)).sort((a,b)=>a.ts-b.ts); playCompare(rs); };
+
+/* =========================================================
+   設定
+   ========================================================= */
+function renderSettings(){
+  const chOpts = Array.from({length:16},(_,i)=>`<option value="${i+1}">${i+1}</option>`).join('');
+  $('sChR').innerHTML=chOpts; $('sChL').innerHTML=chOpts; $('sChR').value=S().chR; $('sChL').value=S().chL;
+  $('sVel').value=S().vel; $('sAccOut').value=S().accOut; $('sVol').value=S().vol; $('sNames').value=S().names; $('sWin').value=S().win; $('sLead').value=S().lead;
+  $('sSplit').innerHTML = [48,53,55,57,60,62,64].map(p=>`<option value="${p}">${pfull(p)}</option>`).join(''); $('sSplit').value=S().split;
+}
+const bindS = (id, key, num) => $(id).addEventListener('change', ()=>{ allLightsOff(); S()[key] = num ? +$(id).value : $(id).value; save(); });
+bindS('sChR','chR',1); bindS('sChL','chL',1); bindS('sVel','vel',1); bindS('sAccOut','accOut'); bindS('sNames','names'); bindS('sWin','win',1); bindS('sLead','lead',1); bindS('sSplit','split',1);
+$('sVol').addEventListener('input', ()=>{ S().vol=+$('sVol').value; if(master) master.gain.value=S().vol/100*0.5; save(); });
+$('sIn').addEventListener('change', ()=>{ S().inName=$('sIn').value; save(); pickPorts(); });
+$('sOut').addEventListener('change', ()=>{ S().outName=$('sOut').value; save(); pickPorts(); });
+$('sReconn').onclick=connect;
+$('sLightTest').onclick=()=>{ if(!MIDI.out){ toast('キーボードが接続されていません'); return; } const n=performance.now(); [60,62,64,65,67].forEach((p,i)=>{ lightOn(p,'R',n+i*400); lightOff(p,'R',n+i*400+380); }); [48,52,55].forEach(p=>{ lightOn(p,'L',n+2100); lightOff(p,'L',n+3300); }); toast('右手：ドレミファソ、左手：ドミソ の順に光るはずです'); };
+$('bkSave').onclick=()=>{ const blob=new Blob([JSON.stringify(DB)],{type:'application/json'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='piano-renshuu-'+today()+'.json'; document.body.appendChild(a); a.click(); a.remove(); toast('バックアップを保存しました'); };
+$('bkLoad').onclick=()=>{ $('bkFile').value=''; $('bkFile').click(); };
+$('bkFile').addEventListener('change', async e=>{ const f=e.target.files[0]; if(!f) return; try{ const o=JSON.parse(await f.text()); if(!o.songs) throw 0; if(!await confirmBox('今のデータをバックアップの内容に置き換えますか？')) return; DB=o; DB.settings=Object.assign({},DEF_SETTINGS,DB.settings||{}); seed(); save(); renderAll(); toast('読み込みました'); }catch(err){ toast('バックアップファイルを読めませんでした'); } });
+$('bkReset').onclick=async()=>{ if(await confirmBox('練習記録・読み込んだ曲・録音をすべて消します。よろしいですか？')){ try{ localStorage.removeItem(KEY); }catch(e){} load(); renderAll(); toast('初期状態に戻しました'); } };
+
+/* =========================================================
+   タブ切り替え・起動
+   ========================================================= */
+function switchTab(t){
+  if(curTab==='practice' && t!=='practice') stopPractice();
+  curTab=t; document.querySelectorAll('section.tab').forEach(s=>s.classList.toggle('on', s.id==='t-'+t));
+  [...$('nav').children].forEach(b=>b.classList.toggle('on', b.dataset.t===t));
+  if(t==='today') renderToday();
+  if(t==='songs') renderSongs();
+  if(t==='practice'){ songOptions($('pSong')); if(!$('pSong').value && DB.songs.length) $('pSong').value=DB.lastSong||'b-yubi'; refreshPracticeUI(); }
+  if(t==='edit'){ songOptions($('eSong')); if(!$('eSong').value) $('eSong').value=DB.songs[0].id; loadEditor(); }
+  if(t==='chords') renderChords();
+  if(t==='log') renderLog();
+  if(t==='settings') renderSettings();
+}
+$('nav').addEventListener('click', e=>{ const b=e.target.closest('button'); if(b) switchTab(b.dataset.t); });
+$('conn').onclick=connect;
+function renderAll(){ switchTab(curTab); }
+document.addEventListener('visibilitychange', ()=>{ if(document.hidden) stopPractice(); });
+window.addEventListener('beforeunload', ()=>{ allLightsOff(); try{ localStorage.setItem(KEY, JSON.stringify(DB)); }catch(e){} });
+
+load();
+eKb = makeKb($('eKb'), 36, 84);
+songOptions($('pSong')); $('pSong').value = DB.lastSong && getSong(DB.lastSong) ? DB.lastSong : 'b-yubi';
+renderToday(); requestAnimationFrame(draw);
+// 以前許可されていれば自動でつなぐ
+if(navigator.permissions && navigator.requestMIDIAccess){ navigator.permissions.query({name:'midi'}).then(r=>{ if(r.state==='granted') connect(); }).catch(()=>{}); }
+</script>
+</body>
+</html>
